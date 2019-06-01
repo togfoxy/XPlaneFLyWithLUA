@@ -4,7 +4,7 @@ Will pause the sim if you taxi and the FSE client is not logged in.
 Will also automatically start the flight if the pilot forgets to do so.
 
 Requires FlyWithLUA.
-Click the DOWNLOAD button to the right of the file. 
+Click the rar file and then click the DOWNLOAD button to the right of the rar file. 
 Unzip and place into:
 X-Plane 11\Resources\plugins\FlyWithLua\Scripts
 
