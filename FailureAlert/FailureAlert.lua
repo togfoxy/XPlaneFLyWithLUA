@@ -1,4 +1,11 @@
+-- v1.1 Detects a rough landing and deducts 'time' off the MTBF
 
+require "graphics"
+
+--These should probably be reported
+dataref("intRudderTrim", "sim/operation/failures/rel_rud_trim_run")
+
+--Undecided if these should be reported
 dataref("intGearActFailed", "sim/operation/failures/rel_gear_act")
 dataref("intFlapActFailed", "sim/operation/failures/rel_flap_act")
 dataref("intAPFailed", "sim/operation/failures/rel_otto")
@@ -11,23 +18,35 @@ dataref("intMagneto1Failed","sim/operation/failures/rel_magLFT0")
 dataref("intMagneto2Failed","sim/operation/failures/rel_magLFT1")
 dataref("intFuelFlow1Failed","sim/operation/failures/rel_eng_lo0")
 dataref("intFuelFlow2Failed","sim/operation/failures/rel_eng_lo1")
+dataref("intEng1Flameout","sim/operation/failures/rel_engfla0")
+dataref("intEng2Flameout","sim/operation/failures/rel_engfla1")
+dataref("intEng3Flameout","sim/operation/failures/rel_engfla2")
+dataref("intEng4Flameout","sim/operation/failures/rel_engfla3")
+dataref("intEng1Seized","sim/operation/failures/rel_seize_0")
+dataref("intEng2Seized","sim/operation/failures/rel_seize_1")
+dataref("intEng3Seized","sim/operation/failures/rel_seize_2")
+dataref("intEng4Seized","sim/operation/failures/rel_seize_3")
+dataref("intCom1Failed","sim/operation/failures/rel_com1")
+
+--These are being reported but maybe shouldn't be
+dataref("intPFDFailed", "sim/operation/failures/rel_g_pfd")
 
 dataref("bolEnableRandomFailures", "sim/operation/failures/enable_random_failures","writable")
 dataref("intMTBF","sim/operation/failures/mean_time_between_failure_hrs","writable")
+
+bolEnableRandomFailures = 1
 
 function round(num, idp)
 	return tonumber(string.format("%." .. (idp or 0) .. "f", num))
 end	
 
+
 function OutputMessage(strMsg, intNextLine)
-	draw_string(15, intNextLine, strMsg, "red")
+	draw_string(15, intNextLine, strMsg, "white")
 	intNextMsgLine = intNextMsgLine - 15
 end
 
 function draw_failures()
-
-	bolEnableRandomFailures = 1
-	intMTBF = 300.0
 	
 	local strMessage = " "
 	intNextMsgLine = 450
@@ -68,8 +87,67 @@ function draw_failures()
 	if intFuelFlow2Failed == 6 then
 		OutputMessage("Fuel pump 2 failure", intNextMsgLine)
 	end		
+	if intEng1Flameout == 6 or intEng2Flameout == 6 or intEng3Flameout == 6 or intEng4Flameout == 6 then
+		OutputMessage("Engine flameout", intNextMsgLine)
+	end
+	if intEng1Seized == 6 or intEng2Seized == 6 or intEng3Seized == 6 or intEng4Seized == 6 then
+		OutputMessage("Engine seized", intNextMsgLine)
+	end	
+	if intCom1Failed == 6 then
+		OutputMessage("Radio failure", intNextMsgLine)
+	end
+	if intPFDFailed == 6 then
+		OutputMessage("Primary flight display failure", intNextMsgLine)
+	end
+	if intRudderTrim == 6 then	
+		OutputMessage("Rudder failed", intNextMsgLine)
+	end
+	
+	
 end
 
+dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
+dataref("fltVerticalFPM","sim/flightmodel/position/vh_ind_fpm")
+
+local lastcrashtime = 0
+function DetectCrash()
+	if bolOnTheGround == 1 then
+		if fltVerticalFPM < -400 then
+			-- crashed, but have we already crashed recently?
+			mycurrenttime = os.time()
+			
+			if lastcrashtime == 0 then
+				-- not crashed this session
+				intMTBF = intMTBF - 100
+				lastcrashtime = os.time()
+				--XPLMSpeakString("Oops")
+				--command_once("sim/operation/pause_toggle")	
+			elseif mycurrenttime - lastcrashtime > 5 then
+				-- not crashed recently
+				intMTBF = intMTBF - 100
+				lastcrashtime = os.time()
+				--XPLMSpeakString("Oops")
+				--command_once("sim/operation/pause_toggle")	
+			else
+				-- in process of crashing. Do nothing as fail already adjusted
+			end
+		end
+		if intMTBF < 500 then 
+			intMTBF = 500
+		end
+	end
+end
+
+
+
+function PreflightInspection()
+	--math.randomseed(os.time()) ﻿
+	fltRndNum = math.random(0,1)
+end
+
+
+
 do_every_draw("draw_failures()")
+do_every_frame("DetectCrash()")
 
 
