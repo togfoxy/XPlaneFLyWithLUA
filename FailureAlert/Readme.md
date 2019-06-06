@@ -1,0 +1,1 @@
+-- v1.1 Detects a rough landing and deducts 'time' off the MTBF
