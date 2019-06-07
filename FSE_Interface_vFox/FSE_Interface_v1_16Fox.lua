@@ -85,13 +85,19 @@
 --  Now recognises when the sim is in replay mode
 --
 --Version 1.16Foxyv4 2019-June-3 TOGFox
---  Automatically ets QNH to local airport upon takeoff
+--  Automatically sets QNH to local airport upon takeoff
+--
+--Version 1.16Foxyv5 2019-June-4 TOGFox
+--  Adjusted the window just a touch
+--
+--Version 1.16Foxyv6 2019-June-7 TOGFox
+--  Corrected a defect where barameter was not always set automatically
 --
 --________________________________________________________--
 
 --position of the interface
-local XMin=50
-local YMin=770 --770 is also good
+local XMin=15
+local YMin=735 --770 is also good
 
 --set your lease time left warning in seconds
 local LeaseTimeLeftWarnSecs=1800
@@ -118,14 +124,7 @@ function eventTakeOffWithoutFseFlightStarted()
 	end
 end
 --________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
---________________________________________________________--
+
 
 require "graphics"
 --________________________________________________________--
@@ -177,9 +176,10 @@ function fse_interface_check_often()
 			if(flightNotStarted==2) then --trigger event once(!) on stage 2
 				if (fse_flying==0) then
 					eventTakeOffWithoutFseFlightStarted()
-					fltQNHSetting = fltQNH
+					
 				end
 			end
+			fltQNHSetting = fltQNH
 		end
 		if(datRAlt<10 and datGSpd<5) then
 			flightNotStarted=0
