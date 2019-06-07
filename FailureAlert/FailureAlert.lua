@@ -1,5 +1,7 @@
 -- v1.1 Detects a rough landing and deducts 'time' off the MTBF
 
+local intHardLandingLimit = -500
+
 require "graphics"
 
 --These should probably be reported
@@ -111,20 +113,23 @@ dataref("fltVerticalFPM","sim/flightmodel/position/vh_ind_fpm")
 
 local lastcrashtime = 0
 function DetectCrash()
+	local fltExcessSpeedValue = 0
+	
 	if bolOnTheGround == 1 then
-		if fltVerticalFPM < -400 then
+		if fltVerticalFPM < intHardLandingLimit then
 			-- crashed, but have we already crashed recently?
 			mycurrenttime = os.time()
+			fltExcessSpeedValue = fltVerticalFPM + intHardLandingLimit
 			
 			if lastcrashtime == 0 then
 				-- not crashed this session
-				intMTBF = intMTBF - 100
+				intMTBF = intMTBF + fltExcessSpeedValue
 				lastcrashtime = os.time()
 				--XPLMSpeakString("Oops")
 				--command_once("sim/operation/pause_toggle")	
 			elseif mycurrenttime - lastcrashtime > 5 then
 				-- not crashed recently
-				intMTBF = intMTBF - 100
+				intMTBF = intMTBF + fltExcessSpeedValue
 				lastcrashtime = os.time()
 				--XPLMSpeakString("Oops")
 				--command_once("sim/operation/pause_toggle")	
