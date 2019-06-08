@@ -1,1 +1,2 @@
 -- v1.1 Detects a rough landing and deducts 'time' off the MTBF
+-- v1.2 Correctly registers a landing and calculates MTBF better
