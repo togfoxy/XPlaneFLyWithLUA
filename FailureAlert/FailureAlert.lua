@@ -1,6 +1,7 @@
 -- v1.1 Detects a rough landing and deducts 'time' off the MTBF
+-- v1.2 Correctly registers a landing and calculates MTBF better
 
-local intHardLandingLimit = -500
+intHardLandingLimit = -500
 
 require "graphics"
 
@@ -34,8 +35,6 @@ dataref("intCom1Failed","sim/operation/failures/rel_com1")
 dataref("intPFDFailed", "sim/operation/failures/rel_g_pfd")
 
 dataref("bolEnableRandomFailures", "sim/operation/failures/enable_random_failures","writable")
-dataref("intMTBF","sim/operation/failures/mean_time_between_failure_hrs","writable")
-
 bolEnableRandomFailures = 1
 
 function round(num, idp)
@@ -110,36 +109,35 @@ end
 
 dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
 dataref("fltVerticalFPM","sim/flightmodel/position/vh_ind_fpm")
+dataref("intMTBF","sim/operation/failures/mean_time_between_failure_hrs","writable")
+dataref("datRAlt","sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 
-local lastcrashtime = 0
+local bolFlying = 0
+local fltExcessSpeed = 0
+
 function DetectCrash()
-	local fltExcessSpeedValue = 0
+	if datRAlt > 15 then
+		--we have taken off. Record that fact
+		bolFlying = 1
+	end
 	
-	if bolOnTheGround == 1 then
-		if fltVerticalFPM < intHardLandingLimit then
-			-- crashed, but have we already crashed recently?
-			mycurrenttime = os.time()
-			fltExcessSpeedValue = fltVerticalFPM + intHardLandingLimit
-			
-			if lastcrashtime == 0 then
-				-- not crashed this session
-				intMTBF = intMTBF + fltExcessSpeedValue
-				lastcrashtime = os.time()
-				--XPLMSpeakString("Oops")
-				--command_once("sim/operation/pause_toggle")	
-			elseif mycurrenttime - lastcrashtime > 5 then
-				-- not crashed recently
-				intMTBF = intMTBF + fltExcessSpeedValue
-				lastcrashtime = os.time()
-				--XPLMSpeakString("Oops")
-				--command_once("sim/operation/pause_toggle")	
-			else
-				-- in process of crashing. Do nothing as fail already adjusted
-			end
+	if bolOnTheGround == 1 and bolFlying == 1 then
+		--detected a landing
+		fltExcessSpeed = fltVerticalFPM - intHardLandingLimit
+		if fltExcessSpeed > 0 then
+			fltExcessSpeed = 0
 		end
-		if intMTBF < 500 then 
+		
+		--deduct excess speed off the MTBF
+		intMTBF = intMTBF + fltExcessSpeed
+		
+		if intMTBF < 500 then
 			intMTBF = 500
 		end
+		
+		--record that we have landed
+		bolFlying = 0
+		--command_once("sim/operation/pause_toggle")
 	end
 end
 
