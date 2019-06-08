@@ -1,3 +1,5 @@
+--v1.0 initial release
+
 dataref("strCraftICAO", "sim/aircraft/view/acf_ICAO")
 dataref("fltFlapHandle","sim/flightmodel2/controls/flap_handle_deploy_ratio")
 dataref("fltSpeedBrakeRatio", "sim/cockpit2/controls/speedbrake_ratio")
@@ -14,6 +16,8 @@ dataref("bolAutopilotOn","sim/cockpit2/autopilot/servos_on")
 dataref("fltRadarAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 dataref("fltDisttoWP", "sim/cockpit2/radios/indicators/gps_dme_distance_nm")
 dataref("fltQNH", "sim/weather/barometer_sealevel_inhg")
+
+dataref("intMTBF","sim/operation/failures/mean_time_between_failure_hrs","writable")
 
 local fltConvNMtoFT = 6076.1
 local degAngleToWaypoint = 999.9
@@ -80,8 +84,12 @@ function DrawMyDataRefs()
 	OutputMessage("Alt setting= " .. intAltDialFt, intNextMsgLine)
 	OutputMessage("Pitch deg= " .. round(fltPitchHold,1), intNextMsgLine)
 	OutputMessage("Angle= " .. round(degAngleToWaypoint,1), intNextMsgLine)
-	
+		
+	if datRAlt < 25 then
+		OutputMessage("MTBF= " .. round(intMTBF,1), intNextMsgLine)
+	end
 end
+
 
 -- do_every_draw("draw_my_datarefs()")
 do_every_draw("DrawMyDataRefs()")
