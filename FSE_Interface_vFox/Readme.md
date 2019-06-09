@@ -26,7 +26,7 @@ Version 1.16Foxyv5 2019-June-4 TOGFox
 * Adjusted the window just a touch
 
 Version 1.16Foxyv6 2019-June-7 TOGFox
-* Corrected a defect where barameter was not always set automatically
+* Corrected a defect where barometer was not always set automatically
 
 Version 1.16Foxyv7 2019-June-10 TOGFox
-* Corrected a defect where barameter was updating too often. Now updates once on takeoff
+* Corrected a defect where barometer was updating too often. Now updates once on takeoff
