@@ -93,11 +93,14 @@
 --Version 1.16Foxyv6 2019-June-7 TOGFox
 --  Corrected a defect where barameter was not always set automatically
 --
+--Version 1.16Foxyv7 2019-June-1- TOGFox
+--  Corrected a defect where barameter was updating too often. Now updates once on takeoff
+--
 --________________________________________________________--
 
 --position of the interface
 local XMin=15
-local YMin=735 --770 is also good
+local YMin=600 --770 is also good
 
 --set your lease time left warning in seconds
 local LeaseTimeLeftWarnSecs=1800
@@ -178,8 +181,9 @@ function fse_interface_check_often()
 					eventTakeOffWithoutFseFlightStarted()
 					
 				end
+				fltQNHSetting = fltQNH
 			end
-			fltQNHSetting = fltQNH
+			
 		end
 		if(datRAlt<10 and datGSpd<5) then
 			flightNotStarted=0
