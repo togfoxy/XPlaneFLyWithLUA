@@ -27,3 +27,6 @@ Version 1.16Foxyv5 2019-June-4 TOGFox
 
 Version 1.16Foxyv6 2019-June-7 TOGFox
 * Corrected a defect where barameter was not always set automatically
+
+Version 1.16Foxyv7 2019-June-1- TOGFox
+* Corrected a defect where barameter was updating too often. Now updates once on takeoff
