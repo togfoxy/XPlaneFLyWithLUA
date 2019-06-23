@@ -2,6 +2,7 @@
 --** Persistent Parking
 --** TOGFOX
 --** v0.01
+--** v0.02 - now writes to file only if on the ground and not flying
 --**
 --********************************
 
@@ -17,6 +18,14 @@ local fltLocalY = 0
 local fltLocalZ = 0
 local fltHeading = 0
 local bArrayInitialised	= false	--has the file been read yet?
+local fltairportlat = 0
+local fltairportlong = 0
+
+--these datarefs help determine if the plane has landed
+dataref("tfpp_datRAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
+dataref("tfpp_bolInReplayMode", "sim/time/is_in_replay")
+
 
 function tfpp_GetClosestAirport()
     -- get airport info
@@ -31,6 +40,8 @@ function tfpp_GetClosestAirport()
 	
 	--print("Closest airport = " .. strCurrentAirport)
 
+	--fltairportlat = 
+	--fltairportlong = 
 end
 
 function tfpp_GetCurrentGeoLocation()
@@ -40,6 +51,22 @@ function tfpp_GetCurrentGeoLocation()
 	fltLocalZ = get("sim/flightmodel/position/local_z")
 	fltHeading = get("sim/flightmodel/position/psi")
 	--print("heading on dataref1= " .. get("sim/flightmodel/position/psi"))
+end
+
+function tfpp_deg2rad(deg)
+    return deg * (math.pi/180)
+end
+
+function tfpp_distanceInNM(lat1, lon1, lat2, lon2)
+    local R = 6371 -- Radius of the earth in km
+    local dLat = deg2rad(lat2-lat1)
+    local dLon = deg2rad(lon2-lon1);
+    local a = math.sin(dLat/2) * math.sin(dLat/2) +
+        math.cos(deg2rad(lat1)) * math.cos(deg2rad(lat2)) * 
+        math.sin(dLon/2) * math.sin(dLon/2)
+    local c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    local d = R * c * 0.539956803 -- distance in nm
+    return d
 end
 
 function tfpp_UpdateArray()
@@ -197,17 +224,19 @@ function tfpp_main()
 	tfpp_GetCurrentGeoLocation()
 	
 	--store that in the array
-	tfpp_UpdateArray()
-	
-	--write whole array to table
-	--at some point, we only want to write to file sometimes
-	if bSavePersistentParking then
-		tfpp_writetofile()
+
+	dataref("tfpp_datRAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
+dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
+dataref("tfpp_bolInReplayMode", "sim/time/is_in_replay")
+
+	if tfpp_datGSpd > 20 and tfpp_datRAlt > 25 and tfpp_bolInReplayMode == false then
+		--write whole array to table
+		tfpp_UpdateArray()
+		
+		if bSavePersistentParking then
+			tfpp_writetofile()
+		end		
 	end
-	
-	--print("heading of plane = ".. fltHeading)
-	--print("heading during main loop = " .. get("sim/flightmodel/position/psi"))
-	
 end
 
 if bActivatePersistentParking then
