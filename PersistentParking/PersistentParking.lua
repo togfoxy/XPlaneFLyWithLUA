@@ -24,7 +24,7 @@ local fltairportlong = 0
 --these datarefs help determine if the plane has landed
 dataref("tfpp_datRAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
-dataref("tfpp_bolInReplayMode", "sim/time/is_in_replay")
+dataref("tfpp_InReplayMode", "sim/time/is_in_replay")
 
 
 function tfpp_GetClosestAirport()
@@ -224,16 +224,16 @@ function tfpp_main()
 	tfpp_GetCurrentGeoLocation()
 	
 	--store that in the array
-
-	dataref("tfpp_datRAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
-dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
-dataref("tfpp_bolInReplayMode", "sim/time/is_in_replay")
-
-	if tfpp_datGSpd > 20 and tfpp_datRAlt > 25 and tfpp_bolInReplayMode == false then
+	--print("check 1; " .. tfpp_datGSpd .. ";" .. tfpp_datRAlt .. ";" .. tfpp_bolInReplayMode)
+	if tfpp_datGSpd < 20 and tfpp_datRAlt < 25 and tfpp_InReplayMode == 0 then
 		--write whole array to table
+		--print("check 2")
+		
 		tfpp_UpdateArray()
 		
 		if bSavePersistentParking then
+		
+			--print("check 3")
 			tfpp_writetofile()
 		end		
 	end
