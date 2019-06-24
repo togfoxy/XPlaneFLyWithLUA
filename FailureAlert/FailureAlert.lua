@@ -2,9 +2,12 @@
 -- v1.2 Correctly registers a landing and calculates MTBF better
 -- v1.3 Added two more failure alerts
 -- v1.4 Added a reward for super smooth landings
+-- v1.5 Improved compatibility with other scripts
 
-intHardLandingLimit = -500
-intRewardLandingLimit = -150
+local intHardLandingLimit = -500
+local intRewardLandingLimit = -150
+local intNextMsgLine = 450
+local bolEnableRandomFailures = 1
 
 require "graphics"
 
@@ -40,15 +43,15 @@ dataref("intWheelCollapsed", "sim/operation/failures/rel_collapse1")
 dataref("intPFDFailed", "sim/operation/failures/rel_g_pfd")
 
 dataref("bolEnableRandomFailures", "sim/operation/failures/enable_random_failures","writable")
-bolEnableRandomFailures = 1
 
-function round(num, idp)
+
+function tffa_round(num, idp)
 	return tonumber(string.format("%." .. (idp or 0) .. "f", num))
 end	
 
 
-function OutputMessage(strMsg, intNextLine)
-	draw_string(15, intNextLine, strMsg, "white")
+function tffa_OutputMessage(strMsg)
+	draw_string(15, intNextMsgLine, strMsg, "white")
 	intNextMsgLine = intNextMsgLine - 15
 end
 
@@ -58,61 +61,61 @@ function draw_failures()
 	intNextMsgLine = 450
 	
 	if intGearActFailed == 6 then
-		OutputMessage("Landing gear failure", intNextMsgLine)
+		tffa_OutputMessage("Landing gear failure")
 	end
 	if intFlapActFailed == 6 then
-		OutputMessage("Flaps failure", intNextMsgLine)
+		tffa_OutputMessage("Flaps failure")
 	end
 	if intAPFailed == 6 then
-		OutputMessage("Autopilot failure", intNextMsgLine)
+		tffa_OutputMessage("Autopilot failure")
 	end
 	if intDeIceFailed == 6 then
-		OutputMessage("De-icing failure", intNextMsgLine)
+		tffa_OutputMessage("De-icing failure")
 	end	
 	if intDeIceFailed == 6 then
-		OutputMessage("Cabin depressurising", intNextMsgLine)
+		tffa_OutputMessage("Cabin depressurising")
 	end	
 	if intElecPumpFailed == 6 then
-		OutputMessage("Electric hydraulic pump failure", intNextMsgLine)
+		tffa_OutputMessage("Electric hydraulic pump failure")
 	end	
 	if intManifold1Failed == 6 then
-		OutputMessage("Manifold 1 failure", intNextMsgLine)
+		tffa_OutputMessage("Manifold 1 failure")
 	end		
 	if intManifold2Failed == 6 then
-		OutputMessage("Manifold 2 failure", intNextMsgLine)
+		tffa_OutputMessage("Manifold 2 failure")
 	end			
 	if intMagneto1Failed == 6 then
-		OutputMessage("Magneto 1 failure", intNextMsgLine)
+		tffa_OutputMessage("Magneto 1 failure")
 	end		
 	if intMagneto2Failed == 6 then
-		OutputMessage("Magneto 2 failure", intNextMsgLine)
+		tffa_OutputMessage("Magneto 2 failure")
 	end	
 	if intFuelFlow1Failed == 6 then
-		OutputMessage("Fuel pump 1 failure", intNextMsgLine)
+		tffa_OutputMessage("Fuel pump 1 failure")
 	end		
 	if intFuelFlow2Failed == 6 then
-		OutputMessage("Fuel pump 2 failure", intNextMsgLine)
+		tffa_OutputMessage("Fuel pump 2 failure")
 	end		
 	if intEng1Flameout == 6 or intEng2Flameout == 6 or intEng3Flameout == 6 or intEng4Flameout == 6 then
-		OutputMessage("Engine flameout", intNextMsgLine)
+		tffa_OutputMessage("Engine flameout")
 	end
 	if intEng1Seized == 6 or intEng2Seized == 6 or intEng3Seized == 6 or intEng4Seized == 6 then
-		OutputMessage("Engine seized", intNextMsgLine)
+		tffa_OutputMessage("Engine seized")
 	end	
 	if intCom1Failed == 6 then
-		OutputMessage("Radio failure", intNextMsgLine)
+		tffa_OutputMessage("Radio failure")
 	end
 	if intPFDFailed == 6 then
-		OutputMessage("Primary flight display failure", intNextMsgLine)
+		tffa_OutputMessage("Primary flight display failure")
 	end
 	if intRudderTrim == 6 then	
-		OutputMessage("Rudder failed", intNextMsgLine)
+		tffa_OutputMessage("Rudder failed")
 	end
 	if intStarter1Failed == 6 then	
-		OutputMessage("Starter failure", intNextMsgLine)
+		tffa_OutputMessage("Starter failure")
 	end	
 	if intWheelCollapsed == 6 then	
-		OutputMessage("Landing gear collapse", intNextMsgLine)
+		tffa_OutputMessage("Landing gear collapse")
 	end		
 
 	
@@ -126,7 +129,7 @@ dataref("datRAlt","sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilo
 local bolFlying = 0
 local fltExcessSpeed = 0
 
-function DetectCrash()
+function tffa_DetectCrash()
 	if datRAlt > 15 then
 		--we have taken off. Record that fact
 		bolFlying = 1
@@ -167,6 +170,6 @@ end
 
 
 do_every_draw("draw_failures()")
-do_every_frame("DetectCrash()")
+do_every_frame("tffa_DetectCrash()")
 
 
