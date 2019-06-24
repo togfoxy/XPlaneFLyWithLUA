@@ -1,7 +1,10 @@
 -- v1.1 Detects a rough landing and deducts 'time' off the MTBF
 -- v1.2 Correctly registers a landing and calculates MTBF better
+-- v1.3 Added two more failure alerts
+-- v1.4 Added a reward for super smooth landings
 
 intHardLandingLimit = -500
+intRewardLandingLimit = -150
 
 require "graphics"
 
@@ -30,6 +33,8 @@ dataref("intEng2Seized","sim/operation/failures/rel_seize_1")
 dataref("intEng3Seized","sim/operation/failures/rel_seize_2")
 dataref("intEng4Seized","sim/operation/failures/rel_seize_3")
 dataref("intCom1Failed","sim/operation/failures/rel_com1")
+dataref("intStarter1Failed", "sim/operation/failures/rel_startr0")
+dataref("intWheelCollapsed", "sim/operation/failures/rel_collapse1")
 
 --These are being reported but maybe shouldn't be
 dataref("intPFDFailed", "sim/operation/failures/rel_g_pfd")
@@ -103,7 +108,13 @@ function draw_failures()
 	if intRudderTrim == 6 then	
 		OutputMessage("Rudder failed", intNextMsgLine)
 	end
-	
+	if intStarter1Failed == 6 then	
+		OutputMessage("Starter failure", intNextMsgLine)
+	end	
+	if intWheelCollapsed == 6 then	
+		OutputMessage("Landing gear collapse", intNextMsgLine)
+	end		
+
 	
 end
 
@@ -135,6 +146,11 @@ function DetectCrash()
 			intMTBF = 500
 		end
 		
+		--reward a super smooth landing
+		if fltVerticalFPM >= intRewardLandingLimit then
+			intMTBF = intMTBF + 50
+		end
+				
 		--record that we have landed
 		bolFlying = 0
 		--command_once("sim/operation/pause_toggle")
