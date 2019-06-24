@@ -6,3 +6,5 @@
 
 -- v1.4 Added a reward for super smooth landings
 
+-- v1.5 Improved compatibility with other scripts
+
