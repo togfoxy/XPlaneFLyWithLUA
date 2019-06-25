@@ -3,6 +3,7 @@
 -- v1.3 Added two more failure alerts
 -- v1.4 Added a reward for super smooth landings
 -- v1.5 Improved compatibility with other scripts
+-- v1.6 Added alerts for stalled engine compressor
 
 local intHardLandingLimit = -500
 local intRewardLandingLimit = -150
@@ -38,6 +39,8 @@ dataref("intEng4Seized","sim/operation/failures/rel_seize_3")
 dataref("intCom1Failed","sim/operation/failures/rel_com1")
 dataref("intStarter1Failed", "sim/operation/failures/rel_startr0")
 dataref("intWheelCollapsed", "sim/operation/failures/rel_collapse1")
+dataref("intCompressor1Stalled", "sim/operation/failures/rel_comsta0")
+dataref("intCompressor2Stalled", "sim/operation/failures/rel_comsta1")
 
 --These are being reported but maybe shouldn't be
 dataref("intPFDFailed", "sim/operation/failures/rel_g_pfd")
@@ -51,7 +54,7 @@ end
 
 
 function tffa_OutputMessage(strMsg)
-	draw_string(15, intNextMsgLine, strMsg, "white")
+	draw_string(15, intNextMsgLine, strMsg, "red")
 	intNextMsgLine = intNextMsgLine - 15
 end
 
@@ -118,7 +121,9 @@ function draw_failures()
 		tffa_OutputMessage("Landing gear collapse")
 	end		
 
-	
+	if intCompressor1Stalled == 6 or intCompressor2Stalled == 6 then	
+		tffa_OutputMessage("Compressor stalled")
+	end		
 end
 
 dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
