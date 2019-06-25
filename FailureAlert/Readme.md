@@ -8,3 +8,5 @@
 
 -- v1.5 Improved compatibility with other scripts
 
+-- v1.6 Added alerts for stalled engine compressor
+
