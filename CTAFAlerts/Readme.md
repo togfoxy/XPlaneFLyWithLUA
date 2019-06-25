@@ -9,4 +9,5 @@ Known issues
 - airports in close proximity (e.g. heliports) will confuse the script. It will think aircraft are at the other airport
 
 --v0.01 Inital Alpha release
+
 --v0.2 Now supports up to 11 AI planes
