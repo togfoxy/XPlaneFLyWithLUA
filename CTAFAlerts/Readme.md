@@ -6,7 +6,7 @@ This only works when:
 
 Known issues
 ============
-- only works for one aircraf atm. The script will be expanded to include more aircraft later
 - airports in close proximity (e.g. heliports) will confuse the script. It will think aircraft are at the other airport
 
 --v0.01 Inital Alpha release
+--v0.2 Now supports up to 11 AI planes
