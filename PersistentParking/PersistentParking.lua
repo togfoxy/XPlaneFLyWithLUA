@@ -3,7 +3,7 @@
 --** TOGFOX
 --** v0.01
 --** v0.02 - now writes to file only if on the ground and not flying
---**
+--** v0.03 - better way of determining if plane is parked
 --********************************
 
 --********************************
@@ -25,6 +25,8 @@ local fltairportlong = 0
 dataref("tfpp_datRAlt", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
 dataref("tfpp_InReplayMode", "sim/time/is_in_replay")
+dataref("tfpp_bolOnTheGround", "sim/flightmodel/failures/onground_any")
+dataref("tfpp_intParkBrake","sim/flightmodel/controls/parkbrake")
 
 
 function tfpp_GetClosestAirport()
@@ -32,16 +34,12 @@ function tfpp_GetClosestAirport()
 	-- sets global variable strCurrentAirport
 	local navref
     navref = XPLMFindNavAid( nil, nil, LATITUDE, LONGITUDE, nil, xplm_Nav_Airport)
-    local logAirportId
-    local logAirportName
 	
     -- all output we are not intereted in can be send to variable _ (a dummy variable)
 	_, _, _, _, _, _, strCurrentAirport, _ = XPLMGetNavAidInfo(navref)
 	
 	--print("Closest airport = " .. strCurrentAirport)
 
-	--fltairportlat = 
-	--fltairportlong = 
 end
 
 function tfpp_GetCurrentGeoLocation()
@@ -59,10 +57,10 @@ end
 
 function tfpp_distanceInNM(lat1, lon1, lat2, lon2)
     local R = 6371 -- Radius of the earth in km
-    local dLat = deg2rad(lat2-lat1)
-    local dLon = deg2rad(lon2-lon1);
+    local dLat = tfpp_deg2rad(lat2-lat1)
+    local dLon = tfpp_deg2rad(lon2-lon1);
     local a = math.sin(dLat/2) * math.sin(dLat/2) +
-        math.cos(deg2rad(lat1)) * math.cos(deg2rad(lat2)) * 
+        math.cos(tfpp_deg2rad(lat1)) * math.cos(tfpp_deg2rad(lat2)) * 
         math.sin(dLon/2) * math.sin(dLon/2)
     local c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     local d = R * c * 0.539956803 -- distance in nm
@@ -220,20 +218,16 @@ function tfpp_main()
 	end
 	
 	--get current geographic location
-	--print("heading before get geo = " .. get("sim/flightmodel/position/psi"))
 	tfpp_GetCurrentGeoLocation()
 	
 	--store that in the array
-	--print("check 1; " .. tfpp_datGSpd .. ";" .. tfpp_datRAlt .. ";" .. tfpp_bolInReplayMode)
-	if tfpp_datGSpd < 20 and tfpp_datRAlt < 25 and tfpp_InReplayMode == 0 then
+	--if tfpp_datGSpd < 20 and tfpp_datRAlt < 25 and tfpp_InReplayMode == 0 then
+	--if on the ground and stopped with the park brake on and not in replay mode then ...
+	if tfpp_bolOnTheGround == 1 and tfpp_datGSpd < 10 and tfpp_InReplayMode == 0 and tfpp_intParkBrake == 1 then
 		--write whole array to table
-		--print("check 2")
-		
 		tfpp_UpdateArray()
 		
 		if bSavePersistentParking then
-		
-			--print("check 3")
 			tfpp_writetofile()
 		end		
 	end
