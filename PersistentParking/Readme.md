@@ -19,6 +19,15 @@ How to use
 ==========
 The script works silently and constantly in the background. There is no GUI and no interaction needed from the pilot.
 
+To disable the script, you can:
+- remove the script out of your scripts folder or
+- open the script file with a text editor and adjust these values:
+  -- bActivatePersistentParking  <-- activates/de-activates the script
+  -- bLoadPersistentParking  <-- enables the plane to be repositioned when a session starts
+  -- bSavePersistentParking  <-- enables the plane position to be remembered when parked.
+  
+  The default setting is 1 (number one) for all three values. If you somehow corrupt the file during editing then refresh the script from this github.
+
 How does it work?
 =================
 The script monitors the plane's movement and will remember where you parked your plane. When you start the next session, your plane will be returned to the previous position.
