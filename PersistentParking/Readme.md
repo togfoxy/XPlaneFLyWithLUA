@@ -30,7 +30,7 @@ To disable the script, you can:
   -- bSavePersistentParking  <-- enables the plane position to be remembered when parked.
   
   
-  The default setting is 1 (number one) for all three values. If you somehow corrupt the file during editing then refresh the script from this github.
+  The default setting is 'true' (don't use quotes) for all three values. If you somehow corrupt the file during editing then refresh the script from this github.
 
 How does it work?
 =================
