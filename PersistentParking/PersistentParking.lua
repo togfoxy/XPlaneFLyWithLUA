@@ -5,6 +5,7 @@
 --** v0.02 - now writes to file only if on the ground and not flying
 --** v0.03 - better way of determining if plane is parked
 --** v0.04 - fixed a defect that gave really bad experiences if you crashed
+--** v0.05 - added an extra safeguard to stop loading old positions when landing
 --********************************
 
 --********************************
@@ -179,7 +180,7 @@ function tfpp_main()
 	--get closest airport
 	tfpp_GetClosestAirport()	--thi sets the global variable strCurrentAirport
 	
-	if not bArrayInitialised and tfpp_bolOnTheGround == 1 and tfpp_InReplayMode == 0 then
+	if not bArrayInitialised and tfpp_bolOnTheGround == 1 and tfpp_InReplayMode == 0 and tfpp_datGSpd <= 4 then
 	
 		if bLoadPersistentParking then
 			tfpp_loadfromfile()
