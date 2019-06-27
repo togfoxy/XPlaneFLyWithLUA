@@ -11,6 +11,8 @@ TOGFox
 
 -- v0.04 - fixed a defect that gave really bad experiences if you crashed
 
+-- v0.05 - added an extra safeguard to stop loading old positions when landing
+
 Installation
 ============
 Place .lua file into the FWL scripts directory.
