@@ -1,4 +1,5 @@
 --v1.0 initial release
+--v1.1 Improved compatibility with other scrips
 
 dataref("strCraftICAO", "sim/aircraft/view/acf_ICAO")
 dataref("fltFlapHandle","sim/flightmodel2/controls/flap_handle_deploy_ratio")
@@ -21,72 +22,89 @@ dataref("intMTBF","sim/operation/failures/mean_time_between_failure_hrs","writab
 
 local fltConvNMtoFT = 6076.1
 local degAngleToWaypoint = 999.9
+local strClosestAirport
+
+local intNextMsgLine = 700
+
+
 
 function round(num, idp)
 	return tonumber(string.format("%." .. (idp or 0) .. "f", num))
 end	
 
-function OutputMessage(strMsg, intNextLine)
+function tfdmdr_OutputMessage(strMsg, intNextLine)
 	draw_string(15, intNextLine, strMsg, "white")
 	intNextMsgLine = intNextMsgLine - 15
 end
 
-intNextMsgLine = 700
+function tfDMDR_GetClosestAirport()
+    -- get airport info
+	-- sets global variable strClosestAirport
+	local navref
+    navref = XPLMFindNavAid( nil, nil, LATITUDE, LONGITUDE, nil, xplm_Nav_Airport)
+    local logAirportId
+    local logAirportName
+	
+    -- all output we are not intereted in can be send to variable _ (a dummy variable)
+	_, _, _, _, _, _, strClosestAirport, _ = XPLMGetNavAidInfo(navref)
+end
+
 function DrawMyDataRefs()
 
 	local fltDisttoWPinFT = fltDisttoWP * fltConvNMtoFT
 	degAngleToWaypoint = math.deg(math.atan(fltRadarAlt/fltDisttoWPinFT))
 	
+	--get closest airport
+	
 	intNextMsgLine = 1040
 	
-	OutputMessage("Craft ICAO= " .. strCraftICAO, intNextMsgLine)
+	tfdmdr_OutputMessage("Craft ICAO= " .. strCraftICAO, intNextMsgLine)
 	if fltFlapHandle <= 0.1 then
-		OutputMessage("Flaps handle= up", intNextMsgLine)
+		tfdmdr_OutputMessage("Flaps handle= up", intNextMsgLine)
 	elseif fltFlapHandle >= 0.9 then
-		OutputMessage("Flaps handle= down", intNextMsgLine)
+		tfdmdr_OutputMessage("Flaps handle= down", intNextMsgLine)
 	else
-		OutputMessage("Flaps handle= half", intNextMsgLine)		
+		tfdmdr_OutputMessage("Flaps handle= half", intNextMsgLine)		
 	end
 	
 	if fltSpeedBrakeRatio <=0.1 then
-		OutputMessage("Speedbrakes= off", intNextMsgLine)
+		tfdmdr_OutputMessage("Speedbrakes= off", intNextMsgLine)
 	elseif fltSpeedBrakeRatio >=0.9 then
-		OutputMessage("Speedbrakes= full", intNextMsgLine)
+		tfdmdr_OutputMessage("Speedbrakes= full", intNextMsgLine)
 	else
-		OutputMessage("Speedbrakes= half" , intNextMsgLine)
+		tfdmdr_OutputMessage("Speedbrakes= half" , intNextMsgLine)
 	end
 	
 	if intGearHandle == 0 then
-		OutputMessage("Gear handle= up", intNextMsgLine)
+		tfdmdr_OutputMessage("Gear handle= up", intNextMsgLine)
 	else
-		OutputMessage("Gear handle= down", intNextMsgLine)
+		tfdmdr_OutputMessage("Gear handle= down", intNextMsgLine)
 	end
 	
 	if intParkBrake == 0 then
-		OutputMessage("Park brake= off", intNextMsgLine)
+		tfdmdr_OutputMessage("Park brake= off", intNextMsgLine)
 	else
-		OutputMessage("Park brake= on", intNextMsgLine)
+		tfdmdr_OutputMessage("Park brake= on", intNextMsgLine)
 	end
 
-	OutputMessage("Wheel brake= " .. round(fltWheelBrake,1), intNextMsgLine)
-	OutputMessage("============", intNextMsgLine)
-	OutputMessage("QNH= " .. round((fltQNH * 100),0), intNextMsgLine)
+	tfdmdr_OutputMessage("Wheel brake= " .. round(fltWheelBrake,1), intNextMsgLine)
 	
 	if bolAutopilotOn == 0 then
-		OutputMessage("Autopilot= off", intNextMsgLine)
+		tfdmdr_OutputMessage("Autopilot= off", intNextMsgLine)
 	else
-		OutputMessage("Autopilot= on ", intNextMsgLine)
+		tfdmdr_OutputMessage("Autopilot= on ", intNextMsgLine)
 	end
-	
-	OutputMessage("Airspeed setting= " .. fltAirSpeedSetting, intNextMsgLine)
-	OutputMessage("Heading bug= " .. round(fltHeadingBug,0), intNextMsgLine)
-	OutputMessage("V Velocity= " .. intVertVelocity, intNextMsgLine)
-	OutputMessage("Alt setting= " .. intAltDialFt, intNextMsgLine)
-	OutputMessage("Pitch deg= " .. round(fltPitchHold,1), intNextMsgLine)
-	OutputMessage("Angle= " .. round(degAngleToWaypoint,1), intNextMsgLine)
+	tfdmdr_OutputMessage("============", intNextMsgLine)
+	tfdmdr_OutputMessage("QNH= " .. round((fltQNH * 100),0), intNextMsgLine)
+	tfdmdr_OutputMessage("Airspeed setting= " .. fltAirSpeedSetting, intNextMsgLine)
+	tfdmdr_OutputMessage("Heading bug= " .. round(fltHeadingBug,0), intNextMsgLine)
+	tfdmdr_OutputMessage("V Velocity= " .. intVertVelocity, intNextMsgLine)
+	tfdmdr_OutputMessage("Alt setting= " .. intAltDialFt, intNextMsgLine)
+	tfdmdr_OutputMessage("Pitch deg= " .. round(fltPitchHold,1), intNextMsgLine)
+	tfdmdr_OutputMessage("Angle= " .. round(degAngleToWaypoint,1), intNextMsgLine)
 		
 	if datRAlt < 25 then
-		OutputMessage("MTBF= " .. round(intMTBF,1), intNextMsgLine)
+		tfdmdr_OutputMessage("MTBF= " .. round(intMTBF,1), intNextMsgLine)
 	end
 end
 
