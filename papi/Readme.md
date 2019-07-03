@@ -5,6 +5,10 @@ TOGFox
 
 -- v0.01 - initial release
 
+Requires
+========
+FlyWithLUA NG
+
 Installation
 ============
 Place tf_papi.lua file into the FWL Scripts directory.
@@ -32,6 +36,10 @@ Known issues
 ============
 - Some airports are really close together and this might confuse the plug-in. The lights will still work - but will be "locked" on the wrong airport
 - real PAPI lights are calibrated for the end of the runway. The virtual lights are calibrated for the centre of the airport. Excpet slightly inconsisten results.
+
+Licence
+=======
+Feel free to change for personal use. If you re-use some code components then please give credit. No permission to re-host or republish without permission.
 
 
 
