@@ -15,7 +15,7 @@ How to use
 The script works silently and constantly in the background. There is no GUI and no interaction needed from the pilot. To disable the virutual PAPI lights simply delete the tf_papi.lua file (and optionally, the tf_common_functions.lua file).
 
 To disable the script, you can:
-- remove the tf_papi.lua file out of your scripts folder or
+- remove the tf_papi.lua file out of your scripts folder
 
 How does it work?
 =================
