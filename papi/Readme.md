@@ -5,6 +5,13 @@ TOGFox
 
 -- v0.01 - initial release
 
+-- v0.02 - adjusted distance to airport by -500m to approximate the end of the runway
+
+--		   - added an indicator(arrow) that shows if you're moving towards the 3 deg glide slope or away from it
+
+--		   - recalibrated the lights as it was bringing the pilot in too low
+
+
 Requires
 ========
 FlyWithLUA NG
