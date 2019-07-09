@@ -2,12 +2,19 @@
 -- TOGFox
 -- Thanks to Teddii on the FSEconomy forums for the inspiration to write this HUD
 -- For support: post on x-plane.org
+
+-- v0.01
 -- v0.02
 -- v0.03
 --		Corrected 'end flight' bug
 -- v0.04
 --		Auto-end flight works better
+-- v0.05
+--		Added a hot-spot marker to guide the mouse.
 
+-- Requires tf_common_functions v0.02 or later
+
+local bolShowHotSpot = 1	--Change this to zero if you don't like the marker
 local intHudXStart = 15		--This can be changed
 local intHudYStart = 475	--This can be changed
 -- ---------------------------------------------------------------------
@@ -26,6 +33,7 @@ dataref("fltFuelWeightLBS" ,"sim/aircraft/weight/acf_m_fuel_tot")
 
 local fltInitialFuelWeightKGS = 0	--for GUI status report
 local fltFuelUsedSoFar = 0 			--in KGs
+local fltGallons = 0
 
 local intButtonWidth = 95
 local intButtonHeight = 30
@@ -72,21 +80,21 @@ function tfFSE_DrawAutoConnect()
 	local y2 = intHudYStart + (intButtonHeight * 4)
 	
 	if intActionTypeLogin == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "action", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
 	elseif intActionTypeLogin == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeLogin == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeLogin == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "voice alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
 	else
 		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "connect", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "connect", "white")
 	end
 		
 	if intActionTypeLogin > ACTION_NONE then
@@ -107,21 +115,21 @@ function tfFSE_DrawAutoStart()
 	--print("zz" .. intActionTypeRegisterFlight)
 	
 	if intActionTypeRegisterFlight == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "action", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
 	elseif intActionTypeRegisterFlight == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeRegisterFlight == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeRegisterFlight == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "voice alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
 	else
 		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "register", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "register", "white")
 	end
 
 	if intActionTypeRegisterFlight > ACTION_NONE then
@@ -140,21 +148,21 @@ function tfFSE_DrawAutoEnd()
 	local y2 =intHudYStart + (intButtonHeight * 2)
 	
 	if intActionTypeEndflight == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "action", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
 	elseif intActionTypeEndflight == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeEndflight == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
 	elseif intActionTypeEndflight == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "voice alert", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
 	else
 		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "end flight", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "end flight", "white")
 	end
 
 	if intActionTypeEndflight > ACTION_NONE then
@@ -247,7 +255,7 @@ function tfFSE_DrawStatus()
 	local x2 = intHudXStart + intButtonWidth * 2 
 	local y2 = intHudYStart + (intButtonHeight) - intButtonBorder
 	local strTempValue
-	local fltGallons = 0
+	
 	
 	if fse_flying == 1 then
 		fltFuelUsedSoFar = tf_common_functions.round((fltInitialFuelWeightKGS - fltFuelWeightKG),1)
@@ -256,14 +264,33 @@ function tfFSE_DrawStatus()
 		fltFlightTime = os.clock() - fltBeginFlightTimer
 	end
 	
-	strTempValue = "Flight time: " .. (tf_common_functions.round(fltFlightTime,0))
-	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.6, strTempValue, "white")
+	strTempValue = "Flight time: " .. tf_common_functions.tf_SecondsToClockFormat(fltFlightTime)
+	graphics.draw_string(x1 + intButtonWidth * 0.10, y1 + intButtonHeight * 0.6, strTempValue, "white")
 	
 	strTempValue = "Fuel used: " .. fltFuelUsedSoFar .. " kg / " .. fltGallons .. " gallons"
-	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.2, strTempValue, "white")
+	graphics.draw_string(x1 + intButtonWidth * 0.10, y1 + intButtonHeight * 0.2, strTempValue, "white")
 	
 	graphics.set_color( 1, 1, 1, 0.20) --white
 	graphics.draw_rectangle(x1, y1, x2, y2)
+end
+
+function tfFSE_DrawCorner()
+	--Draw one corner of the HUD so people know where to put the mouse_over
+	graphics.set_color(0,0,0,0.75)	--black
+	
+	--draw the vertical line
+	local x1 = intHudXStart
+	local y1 = intHudYStart + (intButtonHeight * 3.5)
+	local x2 = intHudXStart
+	local y2 = intHudYStart + (intButtonHeight * 4.0)
+	graphics.draw_line(x1,y1,x2,y2)
+	
+	--draw the horizontal line
+	x1 = intHudXStart
+	y1 = intHudYStart + (intButtonHeight * 4.0)
+	x2 = intHudXStart + (intButtonWidth * 0.25)
+	y2 = intHudYStart + (intButtonHeight * 4.0)
+	graphics.draw_line(x1,y1,x2,y2)
 end
 
 -- ############################################################################
@@ -477,11 +504,18 @@ function speakNoText(sText)
 end
 
 function tfFSE_main()
+	
+	XPLMSetGraphicsState(0,0,0,1,1,0,0)
+	
+	if bolShowHotSpot == 1 then
+		tfFSE_DrawCorner()
+	end
+	
 	--check for mouse_over
 	if MOUSE_X < intHudXStart or MOUSE_X > (intHudXStart + intButtonWidth * 2) or MOUSE_Y < intHudYStart or MOUSE_Y > intHudYStart + (intButtonHeight * 4) then
 		return
 	else
-		XPLMSetGraphicsState(0,0,0,1,1,0,0)
+		
 		tfFSE_DrawAutoConnect()
 		tfFSE_DrawAutoStart()
 		tfFSE_DrawAutoEnd()
@@ -491,6 +525,8 @@ function tfFSE_main()
 		tfFSE_DrawCancelFlight()
 		tfFSE_DrawStatus()
 	end
+	
+	
 	
 	--capture fuel levels for status reporting
 	if fltInitialFuelWeightKGS == 0 and fse_flying == 1 then
