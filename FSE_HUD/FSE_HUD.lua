@@ -3,15 +3,19 @@
 -- Thanks to Teddii on the FSEconomy forums for the inspiration to write this HUD
 -- For support: post on x-plane.org
 -- v0.02
+-- v0.03
+--		Corrected 'end flight' bug
+
 
 local intHudXStart = 15		--This can be changed
 local intHudYStart = 475	--This can be changed
 -- ---------------------------------------------------------------------
 require "graphics"
+require "tf_common_functions"
 
 dataref("fse_connected", "fse/status/connected")
-dataref("TEXTOUT", "sim/operation/prefs/text_out", "writeable")
 dataref("fse_flying", "fse/status/flying")
+dataref("TEXTOUT", "sim/operation/prefs/text_out", "writeable")
 dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
 dataref("intParkBrake", "sim/flightmodel/controls/parkbrake")
 dataref("datGSpd", "sim/flightmodel/position/groundspeed")
@@ -20,7 +24,7 @@ dataref("fltFuelWeightKG" ,"sim/flightmodel/weight/m_fuel_total")
 dataref("fltFuelWeightLBS" ,"sim/aircraft/weight/acf_m_fuel_tot")
 
 local fltInitialFuelWeightKGS = 0	--for GUI status report
-local fltInitialFuelWeightLBS = 0	--for GUI status report
+local fltFuelUsedSoFar = 0 			--in KGs
 
 local intButtonWidth = 95
 local intButtonHeight = 30
@@ -48,8 +52,12 @@ local bolLoginAlertRaised = 0
 local bolFlightRegisteredAlertRaised = 0
 local bolFlightNotEndedAlertRaised = 0
 
-local fltBeginTimer = 0				--timer for tracking how long the flight has ended
+local fltBeginLandedTimer = 0				--timer for tracking how long the flight has ended
 local fltTimerForEndFlight = 10		--seconds. How long the plane needs to be landed before it tries to auto-end flight
+
+local fltBeginFlightTimer = 0		--Track when the flight started
+
+local bolDeparted = 0				--Tracks a departure so it is known when the pilot lands
 
 -- ############################################################################
 -- ##### Drawing functions
@@ -237,17 +245,18 @@ function tfFSE_DrawStatus()
 	local x2 = intHudXStart + intButtonWidth * 2 
 	local y2 = intHudYStart + (intButtonHeight) - intButtonBorder
 	local strTempValue
+	local fltLBSWeight = 0
 	
-	--draw flight
-	strTempValue = "Flight time: " .. "0"
+	if fse_flying == 1 then
+		fltFuelUsedSoFar = tf_common_functions.round((fltInitialFuelWeightKGS - fltFuelWeightKG),1)
+		fltLBSWeight = tf_common_functions.round(fltFuelUsedSoFar * 2.5,1)
+	end
+	
+	strTempValue = "Flight time: " .. (tf_common_functions.round(os.clock() - fltBeginFlightTimer,0))
 	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.6, strTempValue, "white")
 	
-	--draw fuel used
-	--print(fltInitialFuelWeightKGS .. ";" .. fltFuelWeightKG)
-	if fse_flying == 1 then
-		--strTempValue = "Fuel used: " .. (fltInitialFuelWeightKGS - fltFuelWeightKG) .. "kg / " .. (fltInitialFuelWeightLBS - fltFuelWeightLBS) .. " lbs"
-		--graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.2, strTempValue, "white")
-	end
+	strTempValue = "Fuel used: " .. fltFuelUsedSoFar .. " kg / " .. fltLBSWeight .. " lbs"
+	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.2, strTempValue, "white")
 	
 	graphics.set_color( 1, 1, 1, 0.20) --white
 	graphics.draw_rectangle(x1, y1, x2, y2)
@@ -331,11 +340,6 @@ function tfFSE_MouseClick()
 		if fse_flying == 0 then
 			command_once("fse/flight/start")
 			bolCancelledArmed = 0
-			--capture fuel at start of flight so status can be reported on GUI
-			fltInitialFuelWeightKGS = fltFuelWeightKG
-			fltInitialFuelWeightLBS = fltFuelWeightLBS
-			
-			--print(fltInitialFuelWeightKGS)
 		end
 	end	
 	
@@ -419,9 +423,6 @@ function tfFSE_DoAutomation()
 		else
 			--auto-resolve
 			command_once("fse/flight/start")
-			fltInitialFuelWeightKGS = fltFuelWeightKG
-			fltInitialFuelWeightLBS = fltFuelWeightLBS	
-
 			--print(fltInitialFuelWeightKGS)
 		end
 
@@ -430,12 +431,12 @@ function tfFSE_DoAutomation()
 	
 	
 	--if landed then check if there needs to be an action
-	if bolOnTheGround == 1 and datGSpd < 2 and intParkBrake == 1 and fse_flying == 1 and bolFlightNotEndedAlertRaised == 0 then
-		if fltBeginTimer == 0 then	--if timer is not started then start the timer.
-			fltBeginTimer = os.clock()
+	if bolOnTheGround == 1 and datGSpd < 5 and intParkBrake == 1 and fse_flying == 1 and bolDeparted == 1 and bolFlightNotEndedAlertRaised == 0 then
+		if fltBeginLandedTimer == 0 then	--if timer is not started then start the timer.
+			fltBeginLandedTimer = os.clock()
 		end
 		
-		if os.clock() > fltBeginTimer + fltTimerForEndFlight then
+		if os.clock() > fltBeginLandedTimer + fltTimerForEndFlight then
 			--try to end flight
 
 			--## Need to build in a 15 second timer to give the pilot to end flight manually
@@ -459,15 +460,8 @@ function tfFSE_DoAutomation()
 
 			bolFlightNotEndedAlertRaised = 1  --this prevents the alert being raised multiple times	
 		end
-	
-
-	
-	
-	
 	end
-	
-	
-	
+	bolDeparted = 0	--ready for next flight.
 end
 
 function speakNoText(sText)
@@ -492,6 +486,27 @@ function tfFSE_main()
 		tfFSE_DrawCancelFlight()
 		tfFSE_DrawStatus()
 	end
+	
+	--capture fuel levels for status reporting
+	if fltInitialFuelWeightKGS == 0 and fse_flying == 1 then
+		fltInitialFuelWeightKGS = fltFuelWeightKG
+	end
+	
+	--rest fuel at end of each flight
+	if fltInitialFuelWeightKGS > 0 and fse_flying == 0 then
+		fltInitialFuelWeightKGS = 0
+	end
+	
+	--capture flight time for status reporting
+	if fltBeginFlightTimer == 0 and fse_flying == 1 then
+		fltBeginFlightTimer = os.clock()
+	end
+	
+	--register a take off so we don't 'end flight' while departing
+	if bolOnTheGround == 0 then
+		bolDeparted = 10
+	end
+	
 end
 
 
