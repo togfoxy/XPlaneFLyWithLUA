@@ -5,7 +5,8 @@
 -- v0.02
 -- v0.03
 --		Corrected 'end flight' bug
-
+-- v0.04
+--		Auto-end flight works better
 
 local intHudXStart = 15		--This can be changed
 local intHudYStart = 475	--This can be changed
@@ -52,10 +53,11 @@ local bolLoginAlertRaised = 0
 local bolFlightRegisteredAlertRaised = 0
 local bolFlightNotEndedAlertRaised = 0
 
-local fltBeginLandedTimer = 0				--timer for tracking how long the flight has ended
+local fltBeginLandedTimer = 0		--timer for tracking how long the flight has ended
 local fltTimerForEndFlight = 10		--seconds. How long the plane needs to be landed before it tries to auto-end flight
 
 local fltBeginFlightTimer = 0		--Track when the flight started
+local fltFlightTime = 0
 
 local bolDeparted = 0				--Tracks a departure so it is known when the pilot lands
 
@@ -152,7 +154,7 @@ function tfFSE_DrawAutoEnd()
 	else
 		-- Auto-resolve
 		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "register", "white")
+		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "end flight", "white")
 	end
 
 	if intActionTypeEndflight > ACTION_NONE then
@@ -245,17 +247,19 @@ function tfFSE_DrawStatus()
 	local x2 = intHudXStart + intButtonWidth * 2 
 	local y2 = intHudYStart + (intButtonHeight) - intButtonBorder
 	local strTempValue
-	local fltLBSWeight = 0
+	local fltGallons = 0
 	
 	if fse_flying == 1 then
 		fltFuelUsedSoFar = tf_common_functions.round((fltInitialFuelWeightKGS - fltFuelWeightKG),1)
-		fltLBSWeight = tf_common_functions.round(fltFuelUsedSoFar * 2.5,1)
+		fltGallons = tf_common_functions.round(fltFuelUsedSoFar * 0.2642,1)
+		
+		fltFlightTime = os.clock() - fltBeginFlightTimer
 	end
 	
-	strTempValue = "Flight time: " .. (tf_common_functions.round(os.clock() - fltBeginFlightTimer,0))
+	strTempValue = "Flight time: " .. (tf_common_functions.round(fltFlightTime,0))
 	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.6, strTempValue, "white")
 	
-	strTempValue = "Fuel used: " .. fltFuelUsedSoFar .. " kg / " .. fltLBSWeight .. " lbs"
+	strTempValue = "Fuel used: " .. fltFuelUsedSoFar .. " kg / " .. fltGallons .. " gallons"
 	graphics.draw_string(x1 + intButtonWidth * 0.15, y1 + intButtonHeight * 0.2, strTempValue, "white")
 	
 	graphics.set_color( 1, 1, 1, 0.20) --white
@@ -380,7 +384,6 @@ function tfFSE_DoAutomation()
 	--detect key events and react according to the action settings specified by the user
 	
 	--if taxiing and not logged in then check if there needs to be an action
-	--print(datGSpd .. ";" .. fse_connected .. ";" .. bolLoginAlertRaised .. ";" .. intActionTypeLogin)
 	if datGSpd > 5 and fse_connected == 0 and bolLoginAlertRaised == 0 then
 		if intActionTypeLogin == ACTION_NONE then
 			--do nothing
@@ -459,9 +462,11 @@ function tfFSE_DoAutomation()
 			end
 
 			bolFlightNotEndedAlertRaised = 1  --this prevents the alert being raised multiple times	
+			bolDeparted = 0	--ready for next flight.
 		end
 	end
-	bolDeparted = 0	--ready for next flight.
+	
+
 end
 
 function speakNoText(sText)
@@ -503,8 +508,8 @@ function tfFSE_main()
 	end
 	
 	--register a take off so we don't 'end flight' while departing
-	if bolOnTheGround == 0 then
-		bolDeparted = 10
+	if bolOnTheGround == 0 and bolDeparted == 0 then
+		bolDeparted = 1
 	end
 	
 end
