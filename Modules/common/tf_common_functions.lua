@@ -1,6 +1,8 @@
 -- -- -- -- -- -- -- -- -- -- -- -- --
--- -- TOGFox common functions module 
--- -- v0.01
+--TOGFox common functions module 
+--v0.01
+--v0.02
+--		Added tf_SecondsToClockFormat function
 -- -- -- -- -- -- -- -- -- -- -- -- --
 module(..., package.seeall);
 
@@ -48,6 +50,19 @@ function tf_distanceInNM(lat1, lon1, lat2, lon2)
     local c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     local d = R * c * 0.539956803 -- distance in nm
     return d
+end
+
+function tf_SecondsToClockFormat(seconds)
+  local seconds = tonumber(seconds)
+
+  if seconds <= 0 then
+    return "00:00:00";
+  else
+    hours = string.format("%02.f", math.floor(seconds/3600));
+    mins = string.format("%02.f", math.floor(seconds/60 - (hours*60)));
+    secs = string.format("%02.f", math.floor(seconds - hours*3600 - mins *60));
+    return hours..":"..mins..":"..secs
+  end
 end
 
 
