@@ -2,7 +2,11 @@ FSE_HUD
 
 v0.02
 
+v0.03
+
 TOGFox
+
+REQUIRES: tf_common_functions.lua placed into the \FlyWithLua\Modules folder
 
 Notes: You can reposition the HUD by adjusting these two lines:
 
