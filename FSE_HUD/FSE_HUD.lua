@@ -13,12 +13,14 @@
 --		Added a hot-spot marker to guide the mouse.
 -- v0.06
 --		Redesigned the GUI
+-- v0.07
+--		Re-introduced flight time and fuel used
 
 -- Requires tf_common_functions v0.02 or later
 
 local bolShowHotSpot = 1	--Change this to zero if you don't like the marker
 local intHudXStart = 15		--This can be changed
-local intHudYStart = 475	--This can be changed
+local intHudYStart = 575	--This can be changed
 -- ---------------------------------------------------------------------
 
 local intButtonHeight = 30			--the clickable 'panels' are called buttons
@@ -38,6 +40,18 @@ local bolDeparted = 0				--0 = not yet departed from originating airport. Used f
 
 require "graphics"
 require "tf_common_functions"
+
+local ACTION_NONE = 0			--no action
+local ACTION_VOICEONLY = 1		--voice alert
+local ACTION_TEXTANDVOICE = 2	--text and voice
+local ACTION_AUTORESOLVE = 3	--auto-resolve
+local ACTION_TEXTONLY = 4		--text alert
+
+local intActionTypeConnect = ACTION_AUTORESOLVE
+local intActionTypeRegisterFlight = ACTION_AUTORESOLVE
+local intActionTypeEndflight = ACTION_AUTORESOLVE
+
+local bolLoginAlertRaised = 0	--to ensure alerts aren't raised more than once
 
 dataref("fltCurrentFuelWeightKGs" ,"sim/flightmodel/weight/m_fuel_total")
 dataref("fse_connected", "fse/status/connected")
@@ -89,10 +103,20 @@ function tfFSE_DrawStatusPanel()
 	local y2 = y1 + intButtonHeight
 	local strTemp
 	
+	print(fltFuelUsedOnFlightKGs .. ";" .. fltFuelStartWeightKGs ..";" ..fltCurrentFuelWeightKGs)
 	--Work out what the panel values are
-	if FSE_flying == 1 then
+	if fse_flying == 1 then
 		fltFlightTimeSeconds = os.clock() - fltFlightStartTimeSeconds
+		
+		--This bit is a hack. The fuel is suppose to sync when you start flight but there is a timing problem so we do it here as well
+		if fltFlightTimeSeconds > 0 and fltFlightTimeSeconds < 2 then
+			fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
+		end
+		
 		fltFuelUsedOnFlightKGs = tf_common_functions.round((fltFuelStartWeightKGs - fltCurrentFuelWeightKGs), 1)
+		if fltFuelUsedOnFlightKGs < 0 then 
+			--fltFuelUsedOnFlightKGs = 0 
+		end
 	end
 	
 	strTemp = "Flight time: " ..  tf_common_functions.tf_SecondsToClockFormat(fltFlightTimeSeconds)
@@ -105,6 +129,27 @@ function tfFSE_DrawStatusPanel()
 	graphics.set_color(1, 1, 1, fltTransparency) --white
 	graphics.draw_rectangle(x1,y1,x2,y2)
 	
+	--print(fltFlightStartTimeSeconds .. ";" .. fltFlightTimeSeconds)
+	
+end
+
+function tfFSE_DrawCorner()
+	--Draw one corner of the HUD so people know where to put the mouse_over
+	graphics.set_color(0,0,0,0.75)	--black
+	
+	--draw the vertical line
+	local x1 = intHudXStart
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight + intButtonHeight
+	local x2 = x1
+	local y2 = y1 + intHeadingHeight + intFrameBorderSize
+	graphics.draw_line(x1,y1,x2,y2)
+	
+	--draw the horizontal line
+	--x1 = x1		--no change
+	y1 = y2
+	x2 = x1 + intButtonWidth * 0.25
+	y2 = y1
+	graphics.draw_line(x1,y1,x2,y2)
 end
 
 function tfFSE_DrawAlphaState()
@@ -174,7 +219,7 @@ function tfFSE_DrawCharlieState()
 	x2 = x1 + intButtonWidth
 	y2 = y1 + intButtonHeight	
 	
-	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
+	graphics.draw_string(x1 + (intButtonWidth * 0.1), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
 	graphics.draw_rectangle(x1,y1,x2,y2)
@@ -310,6 +355,15 @@ end
 	
 function tfFSE_DrawThings()
 
+	XPLMSetGraphicsState(0,0,0,1,1,0,0)
+	
+	if bolShowHotSpot == 1 then
+		tfFSE_DrawCorner()
+	end
+	
+	--This bit is a hack to try to get the correct fuel
+	
+	
 	--check for mouse over before drawing
 	local x1 = intHudXStart
 	local y1 = intHudYStart
@@ -318,7 +372,6 @@ function tfFSE_DrawThings()
 	if MOUSE_X < x1 or MOUSE_X > x2 or MOUSE_Y < y1 or MOUSE_Y > y2 then
 		--don't draw
 	else
-		XPLMSetGraphicsState(0,0,0,1,1,0,0)
 		tfFSE_DrawOutsidePanel()
 		tfFSE_DrawInsidePanel()
 		tfFSE_DrawHeadingPanel()
@@ -329,6 +382,7 @@ end
 	
 function tfFSE_ConnectToServer()
 	command_once("fse/server/connect")
+	bolLoginAlertRaised = 0
 end
 
 function tfFSE_RegisterFlight()
@@ -336,6 +390,7 @@ function tfFSE_RegisterFlight()
 	bolCancelArmed = 0
 	fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
 	fltFlightStartTimeSeconds = os.clock()
+	print("reset")
 end	
 	
 function tfFSE_CancelArm()
@@ -445,8 +500,37 @@ function tfFSE_MouseClick()
 	end
 end	
 	
+function tfFSE_Automation()	
+	--detect key events and react according to the action settings specified by the user
+	
+	--if taxiing and not logged in then check if there needs to be an action
+	if datGSpd > 5 and fse_connected == 0 and bolLoginAlertRaised == 0 then
+		if intActionTypeConnect == ACTION_NONE then
+			--do nothing
+		elseif intActionTypeLogin == ACTION_TEXTONLY then
+			--display a text warning
+		
+			-- ## TODO: how to display a string outside a do_every_draw event?
+			
+		elseif intActionTypeConnect == ACTION_VOICEONLY then
+			--audible only
+			--speakNoText("Not logged into FSE") 
+		elseif intActionTypeConnect == ACTION_TEXTANDVOICE then
+			--text and audible
+			XPLMSpeakString("Not logged into FSE")
+		else
+			--auto-resolve
+			tfFSE_ConnectToServer()
+		end
+		
+		bolLoginAlertRaised = 1	--this prevents the alert being raised multiple times
+			
+	end
+end
+	
 do_every_draw("tfFSE_DrawThings()")
 do_on_mouse_click("tfFSE_MouseClick()")
+do_sometimes("tfFSE_Automation()")
 	
 	
 	
