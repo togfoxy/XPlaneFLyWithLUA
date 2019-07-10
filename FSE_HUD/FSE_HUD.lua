@@ -11,6 +11,8 @@
 --		Auto-end flight works better
 -- v0.05
 --		Added a hot-spot marker to guide the mouse.
+-- v0.06
+--		Redesigned the GUI
 
 -- Requires tf_common_functions v0.02 or later
 
@@ -18,543 +20,378 @@ local bolShowHotSpot = 1	--Change this to zero if you don't like the marker
 local intHudXStart = 15		--This can be changed
 local intHudYStart = 475	--This can be changed
 -- ---------------------------------------------------------------------
+
+local intButtonHeight = 30			--the clickable 'panels' are called buttons
+local intButtonWidth = 140			--the clickable 'panels' are called buttons
+local intHeadingHeight = 20
+local intFrameBorderSize = 5
+local fltTransparency = 0.10		--alpha value for the boxes
+
+--These help draw the status panel
+local fltFlightStartTimeSeconds = 0	--tracks time at start of flight
+local fltFuelStartWeightKGs = 0		--tracks fuel weight at start of flight
+local fltFlightTimeSeconds = 0		--what gets displayed on screen
+local fltFuelUsedOnFlightKGs = 0	--what gets displayed on screen
+
+local bolCancelArmed = 0			--0 = cancel button is not armed. 1 = cancel button is armed
+local bolDeparted = 0				--0 = not yet departed from originating airport. Used for automation
+
 require "graphics"
 require "tf_common_functions"
 
+dataref("fltCurrentFuelWeightKGs" ,"sim/flightmodel/weight/m_fuel_total")
 dataref("fse_connected", "fse/status/connected")
 dataref("fse_flying", "fse/status/flying")
-dataref("TEXTOUT", "sim/operation/prefs/text_out", "writeable")
 dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
-dataref("intParkBrake", "sim/flightmodel/controls/parkbrake")
 dataref("datGSpd", "sim/flightmodel/position/groundspeed")
 
-dataref("fltFuelWeightKG" ,"sim/flightmodel/weight/m_fuel_total")
-dataref("fltFuelWeightLBS" ,"sim/aircraft/weight/acf_m_fuel_tot")
-
-local fltInitialFuelWeightKGS = 0	--for GUI status report
-local fltFuelUsedSoFar = 0 			--in KGs
-local fltGallons = 0
-
-local intButtonWidth = 95
-local intButtonHeight = 30
-local intButtonBorder = 1
-
-local bolCancelledArmed = 0		--the CANCEL flight button is a two click event. This tracks that button state
-
---Different alarm actions: 
--- 0 = None
--- 1 = text only
--- 2 = voice only
--- 3 = text and voice
--- 4 = auto-resolve
-local ACTION_NONE = 0			--no action
-local ACTION_TEXTONLY = 1		--text alert
-local ACTION_VOICEONLY = 2		--voice alert
-local ACTION_TEXTANDVOICE = 3	--text and voice
-local ACTION_AUTORESOLVE = 4	--auto-resolve
-
-local intActionTypeLogin = ACTION_AUTORESOLVE
-local intActionTypeRegisterFlight = ACTION_AUTORESOLVE
-local intActionTypeEndflight = ACTION_AUTORESOLVE
-
-local bolLoginAlertRaised = 0
-local bolFlightRegisteredAlertRaised = 0
-local bolFlightNotEndedAlertRaised = 0
-
-local fltBeginLandedTimer = 0		--timer for tracking how long the flight has ended
-local fltTimerForEndFlight = 10		--seconds. How long the plane needs to be landed before it tries to auto-end flight
-
-local fltBeginFlightTimer = 0		--Track when the flight started
-local fltFlightTime = 0
-
-local bolDeparted = 0				--Tracks a departure so it is known when the pilot lands
-
--- ############################################################################
--- ##### Drawing functions
--- ############################################################################
-
-function tfFSE_DrawAutoConnect()
+function tfFSE_DrawOutsidePanel()
+	--Draws the overall box
 	local x1 = intHudXStart
-	local y1 = intHudYStart + (intButtonHeight * 3) + intButtonBorder
-	local x2 = intHudXStart + intButtonWidth - intButtonBorder
-	local y2 = intHudYStart + (intButtonHeight * 4)
+	local y1 = intHudYStart
+	local x2 = x1 + intFrameBorderSize + intButtonWidth + intButtonWidth + intFrameBorderSize
+	local y2 = y1 + intFrameBorderSize + intButtonHeight + intButtonHeight + intHeadingHeight + intFrameBorderSize
 	
-	if intActionTypeLogin == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
-	elseif intActionTypeLogin == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeLogin == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeLogin == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
-	else
-		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "connect", "white")
+	graphics.set_color(1, 1, 1, fltTransparency) --white
+	graphics.draw_rectangle(x1,y1,x2,y2)
+end
+
+function tfFSE_DrawInsidePanel()
+	--Draws the inside panel
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intButtonHeight + intButtonHeight + intHeadingHeight
+
+	graphics.set_color(1, 1, 1, fltTransparency) --white
+	graphics.draw_rectangle(x1,y1,x2,y2)
+end
+
+function tfFSE_DrawHeadingPanel()
+	--Draws the heading panel and text at the top of the inside panel
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight + intButtonHeight
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intHeadingHeight
+	
+	graphics.draw_string((x1 + (intButtonWidth * 0.80)),(y1 + (intButtonHeight * 0.25)), "FSE HUD", "white")
+	
+	graphics.set_color(1, 1, 1, fltTransparency) --white
+	graphics.draw_rectangle(x1,y1,x2,y2)	
+end
+
+function tfFSE_DrawStatusPanel()
+	--Draw the status panel that displays flight time and fuel used
+	--Note to me: this method doesn't work when ground acel is used. Suggest finding a dataref that displays flight time.
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intButtonHeight
+	local strTemp
+	
+	--Work out what the panel values are
+	if FSE_flying == 1 then
+		fltFlightTimeSeconds = os.clock() - fltFlightStartTimeSeconds
+		fltFuelUsedOnFlightKGs = tf_common_functions.round((fltFuelStartWeightKGs - fltCurrentFuelWeightKGs), 1)
 	end
+	
+	strTemp = "Flight time: " ..  tf_common_functions.tf_SecondsToClockFormat(fltFlightTimeSeconds)
+	graphics.draw_string(x1 + (intButtonWidth * 0.05),y1 + (intButtonHeight * 0.6),strTemp,"white")
+	
+	local fltFuelUsedOnFlightGALs = tf_common_functions.round((fltFuelUsedOnFlightKGs * 0.2642),1)
+	strTemp = "Fuel used: " .. fltFuelUsedOnFlightKGs .. " KGs / " .. fltFuelUsedOnFlightGALs .. " gals"
+	graphics.draw_string(x1 + (intButtonWidth * 0.05), y1 + (intButtonHeight * 0.2), strTemp, "white")	
+	
+	graphics.set_color(1, 1, 1, fltTransparency) --white
+	graphics.draw_rectangle(x1,y1,x2,y2)
+	
+end
+
+function tfFSE_DrawAlphaState()
+	--Alpha state = not connected to FSE
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intButtonHeight
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to connect", "white")
+	
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)
 		
-	if intActionTypeLogin > ACTION_NONE then
-		graphics.set_color( 0, 1, 0, 0.20) --green
-	else
-		graphics.set_color( 1, 0, 0, 0.20) --red
-	end
-
-	graphics.draw_rectangle(x1, y1, x2, y2)
 end
 
-function tfFSE_DrawAutoStart()
-	local x1 = intHudXStart
-	local y1 = intHudYStart + (intButtonHeight * 2) + intButtonBorder
-	local x2 = intHudXStart + intButtonWidth - intButtonBorder
-	local y2 = intHudYStart + (intButtonHeight * 3)
+function tfFSE_DrawBetaState()
+	--Beta state = connected but not enroute
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intButtonHeight
 	
-	--print("zz" .. intActionTypeRegisterFlight)
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to register flight", "white")
 	
-	if intActionTypeRegisterFlight == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
-	elseif intActionTypeRegisterFlight == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeRegisterFlight == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeRegisterFlight == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
-	else
-		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "register", "white")
-	end
-
-	if intActionTypeRegisterFlight > ACTION_NONE then
-		graphics.set_color( 0, 1, 0, 0.20) --green
-	else
-		graphics.set_color( 1, 0, 0, 0.20) --red
-	end
-
-	graphics.draw_rectangle(x1, y1, x2, y2)
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)
 end
 
-function tfFSE_DrawAutoEnd()
-	local x1 = intHudXStart
-	local y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	local x2 =intHudXStart + intButtonWidth - intButtonBorder
-	local y2 =intHudYStart + (intButtonHeight * 2)
+function tfFSE_DrawCharlieState()
+	--Charlie state = flight in progress (cancel not armed)
 	
-	if intActionTypeEndflight == ACTION_NONE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "No", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "action", "white")
-	elseif intActionTypeEndflight == ACTION_TEXTONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeEndflight == ACTION_VOICEONLY then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Voice", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "alert", "white")
-	elseif intActionTypeEndflight == ACTION_TEXTANDVOICE then
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Text and", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "voice alert", "white")
-	else
-		-- Auto-resolve
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.6), "Auto", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.2), "end flight", "white")
-	end
-
-	if intActionTypeEndflight > ACTION_NONE then
-		graphics.set_color( 0, 1, 0, 0.20) --green
-	else
-		graphics.set_color( 1, 0, 0, 0.20) --red
-	end
-
-	graphics.draw_rectangle(x1, y1, x2, y2)	
+	--There are two buttons side by side in this state
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth
+	local y2 = y1 + intButtonHeight
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Flight in progress", "white")
+	
+	graphics.set_color(1, 1, 1, fltTransparency) --white
+	graphics.draw_rectangle(x1,y1,x2,y2)	
+	
+	--Draw the second button
+	x1 = x2
+	--y1 = y1		--y1 doesn't change value
+	x2 = x1 + intButtonWidth
+	y2 = y1 + intButtonHeight	
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
+	
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)		
 end
 
-function tfFSE_DrawLogin()
-	local x1 = intHudXStart + intButtonWidth + intButtonBorder
-	local y1 =intHudYStart + (intButtonHeight * 3) + intButtonBorder
-	local x2 =intHudXStart + (intButtonWidth * 2)
-	local y2 =intHudYStart + (intButtonHeight * 4)
+function tfFSE_DrawDeltaState()
+	--Delta state = flight in progress (cancel is armed)
 
-	if fse_connected == 1 then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.4), "Logged in", "white")
-		graphics.set_color( 1, 1, 1, 0.20) --white
-	else
-		graphics.draw_string((x1 + intButtonWidth * 0.10), (y1 + intButtonHeight * 0.4), "Not logged in", "white")
-		graphics.set_color( 0, 1, 0, 0.20) --green
-	end
+	--There are two buttons side by side in this state
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth
+	local y2 = y1 + intButtonHeight
 	
-	graphics.draw_rectangle(x1, y1, x2, y2)
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Really cancel?", "white")
+	
+	graphics.set_color(1, 1, 0, fltTransparency) --yellow
+	graphics.draw_rectangle(x1,y1,x2,y2)	
+	
+	--Draw the second button
+	x1 = x2
+	--y1 = y1		--y1 doesn't change value
+	x2 = x1 + intButtonWidth
+	y2 = y1 + intButtonHeight	
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to un-cancel", "white")
+	
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)		
 end
 
-function tfFSE_DrawRegisterFlight()
-	local x1 = intHudXStart + intButtonWidth + intButtonBorder
-	local y1 =intHudYStart + (intButtonHeight * 2) + intButtonBorder
-	local x2 =intHudXStart + (intButtonWidth * 2)
-	local y2 =intHudYStart + (intButtonHeight * 3)
-
-	if fse_flying > 0 or fse_connected == 0 then
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Flight", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "registered", "white")
-		graphics.set_color( 1, 1, 1, 0.20) --white
-		
-	else
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.6), "Register", "white")
-		graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.2), "flight", "white")
-		graphics.set_color( 0, 1, 0, 0.20) --green
-	end
-
-	graphics.draw_rectangle(x1, y1, x2, y2)
+function tfFSE_DrawEchoState()
+	--Echo state = flight in progress but stopped on the ground (ready to end flight)
+	
+	--There are two buttons side by side in this state
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth
+	local y2 = y1 + intButtonHeight
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.05), y1 + (intButtonHeight * 0.4), "Click to end flight", "white")
+	
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)	
+	
+	--Draw the second button
+	x1 = x2
+	--y1 = y1		--y1 doesn't change value
+	x2 = x1 + intButtonWidth
+	y2 = y1 + intButtonHeight	
+	
+	graphics.draw_string(x1 + (intButtonWidth * 0.05), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
+	
+	graphics.set_color( 0, 1, 0, fltTransparency) --green
+	graphics.draw_rectangle(x1,y1,x2,y2)		
 end
 
-function tfFSE_DrawEndFlight()
-	local x1 = intHudXStart + intButtonWidth + intButtonBorder
-	local y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	local x2 =intHudXStart + (intButtonWidth * 1.5) - intButtonBorder
-	local y2 =intHudYStart + (intButtonHeight * 2)
+function tfFSE_DrawButtons()
+	--Examines FSE and flight state to draw the correct buttons in the correct place.
+	--There is a finite number of button states so are just hardcoded here
 	
-	graphics.draw_string((x1 + intButtonWidth * 0.15), (y1 + intButtonHeight * 0.4), "End", "white")
-	if bolOnTheGround == 1 and intParkBrake == 1 and datGSpd <= 5 and fse_flying == 1 then
-		graphics.set_color( 0, 1, 0, 0.20) --green
+	if fse_connected == 0 then
+		--fse_connected == 0
+		tfFSE_DrawAlphaState()
 	else
-		graphics.set_color( 1, 1, 1, 0.20) --white
-	end
-		
-	graphics.draw_rectangle(x1, y1, x2, y2)
-end
-
-function tfFSE_DrawCancelFlight()
-	local x1 = intHudXStart + intButtonWidth * 1.5 + intButtonBorder
-	local y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	local x2 =intHudXStart + (intButtonWidth * 2)
-	local y2 =intHudYStart + (intButtonHeight * 2)
-	
-	if fse_flying == 1 then
-		if bolCancelledArmed == 1 then
-			graphics.draw_string((x1 + intButtonWidth * 0.05), (y1 + intButtonHeight * 0.6), "Really", "white")
-			graphics.draw_string((x1 + intButtonWidth * 0.03), (y1 + intButtonHeight * 0.2), "Cancel?", "white")
-			graphics.set_color( 1, 1, 0, 0.20) --yellow
+		if fse_flying == 0 then
+			--fse_connected == 1
+			--fse_flying == 0
+			tfFSE_DrawBetaState()
 		else
-			graphics.draw_string((x1 + intButtonWidth * 0.03), (y1 + intButtonHeight * 0.4), "Cancel", "white")
-			graphics.set_color( 0, 1, 0, 0.20) --green
-		end
-	else
-		graphics.set_color( 1, 1, 1, 0.20) --white
-	end
-	
-	graphics.draw_rectangle(x1, y1, x2, y2)
-end
-
-function tfFSE_DrawStatus()
-	local x1 = intHudXStart
-	local y1 = intHudYStart 
-	local x2 = intHudXStart + intButtonWidth * 2 
-	local y2 = intHudYStart + (intButtonHeight) - intButtonBorder
-	local strTempValue
-	
-	
-	if fse_flying == 1 then
-		fltFuelUsedSoFar = tf_common_functions.round((fltInitialFuelWeightKGS - fltFuelWeightKG),1)
-		fltGallons = tf_common_functions.round(fltFuelUsedSoFar * 0.2642,1)
-		
-		fltFlightTime = os.clock() - fltBeginFlightTimer
-	end
-	
-	strTempValue = "Flight time: " .. tf_common_functions.tf_SecondsToClockFormat(fltFlightTime)
-	graphics.draw_string(x1 + intButtonWidth * 0.10, y1 + intButtonHeight * 0.6, strTempValue, "white")
-	
-	strTempValue = "Fuel used: " .. fltFuelUsedSoFar .. " kg / " .. fltGallons .. " gallons"
-	graphics.draw_string(x1 + intButtonWidth * 0.10, y1 + intButtonHeight * 0.2, strTempValue, "white")
-	
-	graphics.set_color( 1, 1, 1, 0.20) --white
-	graphics.draw_rectangle(x1, y1, x2, y2)
-end
-
-function tfFSE_DrawCorner()
-	--Draw one corner of the HUD so people know where to put the mouse_over
-	graphics.set_color(0,0,0,0.75)	--black
-	
-	--draw the vertical line
-	local x1 = intHudXStart
-	local y1 = intHudYStart + (intButtonHeight * 3.5)
-	local x2 = intHudXStart
-	local y2 = intHudYStart + (intButtonHeight * 4.0)
-	graphics.draw_line(x1,y1,x2,y2)
-	
-	--draw the horizontal line
-	x1 = intHudXStart
-	y1 = intHudYStart + (intButtonHeight * 4.0)
-	x2 = intHudXStart + (intButtonWidth * 0.25)
-	y2 = intHudYStart + (intButtonHeight * 4.0)
-	graphics.draw_line(x1,y1,x2,y2)
-end
-
--- ############################################################################
--- ##### Mouse click events
--- ############################################################################
-
-function tfFSE_MouseClick()
-	if MOUSE_STATUS ~= "down" then
-		return
-	end
-	
-	local x1
-	local x2
-	local y1
-	local y2
-	
-	--print(MOUSE_X .. ";" .. MOUSE_Y)
-	
-	--is autoconnect toggled?
-	x1 = intHudXStart
-	y1 =intHudYStart + (intButtonHeight * 3) + intButtonBorder
-	x2 =intHudXStart + intButtonWidth - intButtonBorder
-	y2 =intHudYStart + (intButtonHeight * 4)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		--bolAutoConnect = 1 - bolAutoConnect	--flips 0 to 1 and 1 to 0
-		intActionTypeLogin = intActionTypeLogin + 1
-		if intActionTypeLogin > ACTION_AUTORESOLVE then
-			--cycle back to 'none'
-			intActionTypeLogin = ACTION_NONE
-		end
-	end
-	
-	--is auto-register toggled?
-	x1 = intHudXStart
-	y1 =intHudYStart + (intButtonHeight * 2) + intButtonBorder
-	x2 =intHudXStart + intButtonWidth - intButtonBorder
-	y2 =intHudYStart + (intButtonHeight * 3)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		--bolAutoStart = 1 - bolAutoStart	--flips 0 to 1 and 1 to 0
-		intActionTypeRegisterFlight = intActionTypeRegisterFlight + 1
-		if intActionTypeRegisterFlight > ACTION_AUTORESOLVE then
-			intActionTypeRegisterFlight = ACTION_NONE
-		end
-		
-		--print(intActionTypeRegisterFlight)
-	end		
-	
-	--is auto-end toggled?
-	x1 = intHudXStart
-	y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	x2 =intHudXStart + intButtonWidth - intButtonBorder
-	y2 =intHudYStart + (intButtonHeight * 2)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		--bolAutoEnd = 1 - bolAutoEnd	--flips 0 to 1 and 1 to 0
-		intActionTypeEndflight = intActionTypeEndflight + 1
-		if intActionTypeEndflight > ACTION_AUTORESOLVE then
-			intActionTypeEndflight = ACTION_NONE
+			if bolCancelArmed == 0 then
+				if bolOnTheGround == 1 and datGSpd <= 5 then
+					--fse_connected == 1
+					--fse_flying == 1
+					--bolCancelArmed == 0
+					--bolOnTheGround == 1
+					--datGSpd <= 5
+					tfFSE_DrawEchoState()
+				else
+					--fse_connected == 1
+					--fse_flying == 1
+					--bolCancelArmed == 0
+					--bolOnTheGround == ?
+					--datGSpd == ?
+					tfFSE_DrawCharlieState()
+				end
+			else
+				--fse_connected == 1
+				--fse_flying == 1
+				--bolCancelArmed == 1
+				tfFSE_DrawDeltaState()
+			end
 		end
 	end	
+end
 	
-	--is Log in clicked?
-	x1 = intHudXStart + intButtonWidth + intButtonBorder
-	y1 =intHudYStart + (intButtonHeight * 3) + intButtonBorder
-	x2 =intHudXStart + (intButtonWidth * 2)
-	y2 =intHudYStart + (intButtonHeight * 4)
+function tfFSE_DrawThings()
+
+	--check for mouse over before drawing
+	local x1 = intHudXStart
+	local y1 = intHudYStart
+	local x2 = x1 + intFrameBorderSize + intButtonWidth + intButtonWidth + intFrameBorderSize
+	local y2 = y1 + intFrameBorderSize + intButtonHeight + intButtonHeight + intHeadingHeight + intFrameBorderSize	
+	if MOUSE_X < x1 or MOUSE_X > x2 or MOUSE_Y < y1 or MOUSE_Y > y2 then
+		--don't draw
+	else
+		XPLMSetGraphicsState(0,0,0,1,1,0,0)
+		tfFSE_DrawOutsidePanel()
+		tfFSE_DrawInsidePanel()
+		tfFSE_DrawHeadingPanel()
+		tfFSE_DrawStatusPanel()
+		tfFSE_DrawButtons()
+	end
+end	
+	
+function tfFSE_ConnectToServer()
+	command_once("fse/server/connect")
+end
+
+function tfFSE_RegisterFlight()
+	command_once("fse/flight/start")
+	bolCancelArmed = 0
+	fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
+	fltFlightStartTimeSeconds = os.clock()
+end	
+	
+function tfFSE_CancelArm()
+	--Arm the cancel
+	command_once("fse/flight/cancelArm")
+	bolCancelArmed = 1
+
+end
+
+function tfFSE_ReallyCancel()
+	if bolCancelArmed == 1 then	--this is unnecessary but for safety
+		command_once("fse/flight/cancelConfirm")
+		bolCancelArmed = 0
+	end
+end
+	
+function tfFSE_EndFlight()
+	command_once("fse/flight/finish")
+	bolDeparted = 0
+	bolCancelArmed = 0
+end	
+	
+function tfFSE_MouseClick()
+	--process mouse click hot spots
+	
+	--check if button hot spot is clicked
+	
+	--alpha state
+	local x1 = intHudXStart + intFrameBorderSize
+	local y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+	local x2 = x1 + intButtonWidth + intButtonWidth
+	local y2 = y1 + intButtonHeight
+	
+	--print (fse_flying .. ";" .. bolCancelArmed .. ";" .. bolOnTheGround .. ";" .. datGSpd)
+	
 	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
 		if fse_connected == 0 then
-			command_once("fse/server/connect")
-		end
-	end
-
-	--is Register Flight clicked?
-	x1 = intHudXStart + intButtonWidth + intButtonBorder
-	y1 =intHudYStart + (intButtonHeight * 2) + intButtonBorder
-	x2 =intHudXStart + (intButtonWidth * 2)
-	y2 =intHudYStart + (intButtonHeight * 3)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		if fse_flying == 0 then
-			command_once("fse/flight/start")
-			bolCancelledArmed = 0
-		end
-	end	
-	
-	--is End flight clicked?
-	x1 = intHudXStart + intButtonWidth + intButtonBorder
-	y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	x2 =intHudXStart + (intButtonWidth * 1.5) - intButtonBorder
-	y2 =intHudYStart + (intButtonHeight * 2)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		if bolOnTheGround == 1 and intParkBrake == 1 and datGSpd <= 5 and fse_flying == 1 then
-			command_once("fse/flight/finish")
-			bolCancelledArmed = 0
-		end
-	end	
-	
-	--is Cancel flight clicked?
-	x1 = intHudXStart + intButtonWidth * 1.5 + intButtonBorder
-	y1 =intHudYStart + (intButtonHeight * 1) + intButtonBorder
-	x2 =intHudXStart + (intButtonWidth * 2)
-	y2 =intHudYStart + (intButtonHeight * 2)
-	if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
-		if fse_flying == 1 then
-			command_once("fse/flight/cancelArm")
-			bolCancelledArmed = bolCancelledArmed + 1
-			if bolCancelledArmed > 1 then
-				command_once("fse/flight/cancelConfirm")
-			end
-		end
-	end
-end
-
--- ############################################################################
--- ##### Miscellaneous functions
--- ############################################################################
-
-
-function tfFSE_DoAutomation()
-	--detect key events and react according to the action settings specified by the user
-	
-	--if taxiing and not logged in then check if there needs to be an action
-	if datGSpd > 5 and fse_connected == 0 and bolLoginAlertRaised == 0 then
-		if intActionTypeLogin == ACTION_NONE then
-			--do nothing
-		elseif intActionTypeLogin == ACTION_TEXTONLY then
-			--display a text warning
-		
-			-- ## TODO: how to display a string outside a do_every_draw event?
-			
-		elseif intActionTypeLogin == ACTION_VOICEONLY then
-			--audible only
-			speakNoText("Not logged into FSE") 
-		elseif intActionTypeLogin == ACTION_TEXTANDVOICE then
-			--text and audible
-			XPLMSpeakString("Not logged into FSE")
-		else
-			--auto-resolve
-			command_once("fse/server/connect")
+			--Alpha state
+			--try to log in
+			tfFSE_ConnectToServer()
+			return
 		end
 		
-		bolLoginAlertRaised = 1	--this prevents the alert being raised multiple times
-			
-	end
-	--if taking off and not registered flight then check if there needs to be an action
-	if bolOnTheGround == 0 and fse_flying == 0 and bolFlightRegisteredAlertRaised == 0 and fse_connected == 1 then
-		
-
-		if intActionTypeRegisterFlight == ACTION_NONE then
-			--do nothing
-		elseif intActionTypeRegisterFlight == ACTION_TEXTONLY then
-			--display a text warning
-		
-			-- ## TODO: how to display a string outside a do_every_draw event?
-			
-		elseif intActionTypeRegisterFlight == ACTION_VOICEONLY then
-			--audible only
-			speakNoText("Flight not registered with FSE") 
-		elseif intActionTypeRegisterFlight == ACTION_TEXTANDVOICE then
-			--text and audible
-			XPLMSpeakString("Flight not registered with FSE")
-		else
-			--auto-resolve
-			command_once("fse/flight/start")
-			--print(fltInitialFuelWeightKGS)
-		end
-
-		bolFlightRegisteredAlertRaised = 1  --this prevents the alert being raised multiple times
-	end
-	
-	
-	--if landed then check if there needs to be an action
-	if bolOnTheGround == 1 and datGSpd < 5 and intParkBrake == 1 and fse_flying == 1 and bolDeparted == 1 and bolFlightNotEndedAlertRaised == 0 then
-		if fltBeginLandedTimer == 0 then	--if timer is not started then start the timer.
-			fltBeginLandedTimer = os.clock()
+		if fse_connected == 1 and fse_flying == 0 then
+			--Beta state
+			tfFSE_RegisterFlight()
+			return
 		end
 		
-		if os.clock() > fltBeginLandedTimer + fltTimerForEndFlight then
-			--try to end flight
+		--The buttons get small for Charlie, Delta and Echo state - so need more granularity
+		x1 = intHudXStart + intFrameBorderSize
+		y1 = intHudYStart + intFrameBorderSize + intButtonHeight
+		x2 = x1 + intButtonWidth
+		y2 = y1 + intButtonHeight
+		
+		--print(x1 .. ";" .. y1 .. ";" .. x2 .. ";" .. y2)
+		--print(MOUSE_X ..";" .. MOUSE_Y)
 
-			--## Need to build in a 15 second timer to give the pilot to end flight manually
-			if intActionTypeEndflight == ACTION_NONE then
-				--do nothing
-			elseif intActionTypeEndflight == ACTION_TEXTONLY then
-				--display a text warning
-			
-				-- ## TODO: how to display a string outside a do_every_draw event?
+		--check if left button is clicked
+		if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
+		
+				--print("alpha")
+		
+				--The left button has been clicked
+				if (fse_flying == 1 and bolCancelArmed == 0) and (bolOnTheGround == 0 or datGSpd > 5) then
+					--This button is disabled. Do nothing
+					--print("beta")
+					return
+				end
 				
-			elseif intActionTypeEndflight == ACTION_VOICEONLY then
-				--audible only
-				speakNoText("Flight not ended") 
-			elseif intActionTypeEndflight == ACTION_TEXTANDVOICE then
-				--text and audible
-				XPLMSpeakString("Flight not ended")
-			else
-				--auto-resolve
-				command_once("fse/flight/finish")
+				if fse_flying == 1 and bolCancelArmed == 1 then
+					--Really Cancel has been clicked
+					tfFSE_ReallyCancel()
+					--print("Charle")
+					return
+				end
+				
+				if fse_flying == 1 and bolCancelArmed == 0 and bolOnTheGround == 1 and datGSpd <= 5 then
+					--End flight has been clicked
+					--print("Trying to end flight")
+					tfFSE_EndFlight()
+					return
+				end
+		end
+		
+		--The bit above is the left button
+		--This bit is the right button
+		x1 = x2
+		--y1 = y1		--y1 doesn't change value
+		x2 = x1 + intButtonWidth
+		y2 = y1 + intButtonHeight			
+		if MOUSE_X >= x1 and MOUSE_X <= x2 and MOUSE_Y >= y1 and MOUSE_Y < y2 then
+			if fse_flying == 1 and bolCancelArmed == 0 then
+				--Charle state
+				--Cancel is armed
+				tfFSE_CancelArm()
+				return
 			end
-
-			bolFlightNotEndedAlertRaised = 1  --this prevents the alert being raised multiple times	
-			bolDeparted = 0	--ready for next flight.
+			
+			if fse_flying == 1 and bolCancelArmed == 1 then
+				--Deta state
+				--un-cancel flight
+				bolCancelArmed = 0
+				return
+			end
 		end
 	end
+end	
 	
-
-end
-
-function speakNoText(sText)
-	-- Thanks to prokopiu from X-Plane.org
-	TEXTOUT=false
-	XPLMSpeakString(sText)
-	TEXTOUT=true
-end
-
-function tfFSE_main()
-	
-	XPLMSetGraphicsState(0,0,0,1,1,0,0)
-	
-	if bolShowHotSpot == 1 then
-		tfFSE_DrawCorner()
-	end
-	
-	--check for mouse_over
-	if MOUSE_X < intHudXStart or MOUSE_X > (intHudXStart + intButtonWidth * 2) or MOUSE_Y < intHudYStart or MOUSE_Y > intHudYStart + (intButtonHeight * 4) then
-		return
-	else
-		
-		tfFSE_DrawAutoConnect()
-		tfFSE_DrawAutoStart()
-		tfFSE_DrawAutoEnd()
-		tfFSE_DrawLogin()
-		tfFSE_DrawRegisterFlight()
-		tfFSE_DrawEndFlight()
-		tfFSE_DrawCancelFlight()
-		tfFSE_DrawStatus()
-	end
-	
-	
-	
-	--capture fuel levels for status reporting
-	if fltInitialFuelWeightKGS == 0 and fse_flying == 1 then
-		fltInitialFuelWeightKGS = fltFuelWeightKG
-	end
-	
-	--rest fuel at end of each flight
-	if fltInitialFuelWeightKGS > 0 and fse_flying == 0 then
-		fltInitialFuelWeightKGS = 0
-	end
-	
-	--capture flight time for status reporting
-	if fltBeginFlightTimer == 0 and fse_flying == 1 then
-		fltBeginFlightTimer = os.clock()
-	end
-	
-	--register a take off so we don't 'end flight' while departing
-	if bolOnTheGround == 0 and bolDeparted == 0 then
-		bolDeparted = 1
-	end
-	
-end
-
-
---note to myself: need to deal with replay mode
-
-do_every_draw("tfFSE_main()")
+do_every_draw("tfFSE_DrawThings()")
 do_on_mouse_click("tfFSE_MouseClick()")
-do_sometimes("tfFSE_DoAutomation()")
-
-
+	
+	
+	
+	
+	
