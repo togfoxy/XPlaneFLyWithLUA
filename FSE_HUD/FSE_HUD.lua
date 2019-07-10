@@ -74,7 +74,7 @@ function tfFSE_DrawHeadingPanel()
 	local x2 = x1 + intButtonWidth + intButtonWidth
 	local y2 = y1 + intHeadingHeight
 	
-	graphics.draw_string((x1 + (intButtonWidth * 0.80)),(y1 + (intButtonHeight * 0.25)), "FSE HUD", "white")
+	graphics.draw_string((x1 + (intButtonWidth * 0.85)),(y1 + (intButtonHeight * 0.25)), "FSE HUD", "white")
 	
 	graphics.set_color(1, 1, 1, fltTransparency) --white
 	graphics.draw_rectangle(x1,y1,x2,y2)	
@@ -118,7 +118,13 @@ function tfFSE_DrawAlphaState()
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
 	graphics.draw_rectangle(x1,y1,x2,y2)
-		
+	
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)
 end
 
 function tfFSE_DrawBetaState()
@@ -132,6 +138,13 @@ function tfFSE_DrawBetaState()
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
 	graphics.draw_rectangle(x1,y1,x2,y2)
+	
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)
 end
 
 function tfFSE_DrawCharlieState()
@@ -148,6 +161,13 @@ function tfFSE_DrawCharlieState()
 	graphics.set_color(1, 1, 1, fltTransparency) --white
 	graphics.draw_rectangle(x1,y1,x2,y2)	
 	
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)
+	
 	--Draw the second button
 	x1 = x2
 	--y1 = y1		--y1 doesn't change value
@@ -157,7 +177,16 @@ function tfFSE_DrawCharlieState()
 	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
-	graphics.draw_rectangle(x1,y1,x2,y2)		
+	graphics.draw_rectangle(x1,y1,x2,y2)
+
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)	
+
+	
 end
 
 function tfFSE_DrawDeltaState()
@@ -172,7 +201,14 @@ function tfFSE_DrawDeltaState()
 	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Really cancel?", "white")
 	
 	graphics.set_color(1, 1, 0, fltTransparency) --yellow
-	graphics.draw_rectangle(x1,y1,x2,y2)	
+	graphics.draw_rectangle(x1,y1,x2,y2)
+
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)	
 	
 	--Draw the second button
 	x1 = x2
@@ -183,7 +219,14 @@ function tfFSE_DrawDeltaState()
 	graphics.draw_string(x1 + (intButtonWidth * 0.15), y1 + (intButtonHeight * 0.4), "Click to un-cancel", "white")
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
-	graphics.draw_rectangle(x1,y1,x2,y2)		
+	graphics.draw_rectangle(x1,y1,x2,y2)	
+
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)	
 end
 
 function tfFSE_DrawEchoState()
@@ -200,6 +243,13 @@ function tfFSE_DrawEchoState()
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
 	graphics.draw_rectangle(x1,y1,x2,y2)	
 	
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)
+	
 	--Draw the second button
 	x1 = x2
 	--y1 = y1		--y1 doesn't change value
@@ -209,7 +259,14 @@ function tfFSE_DrawEchoState()
 	graphics.draw_string(x1 + (intButtonWidth * 0.05), y1 + (intButtonHeight * 0.4), "Click to cancel flight", "white")
 	
 	graphics.set_color( 0, 1, 0, fltTransparency) --green
-	graphics.draw_rectangle(x1,y1,x2,y2)		
+	graphics.draw_rectangle(x1,y1,x2,y2)
+
+	--draw button outline
+	graphics.set_color(0,0,0,0.5)	--black
+	graphics.draw_line(x1,y1,x2,y1)
+	graphics.draw_line(x2,y1,x2,y2)
+	graphics.draw_line(x2,y2,x1,y2)
+	graphics.draw_line(x1,y2,x1,y1)	
 end
 
 function tfFSE_DrawButtons()
