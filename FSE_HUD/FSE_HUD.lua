@@ -15,6 +15,8 @@
 --		Redesigned the GUI
 -- v0.07
 --		Re-introduced flight time and fuel used
+--v0.08
+--		Added some automation - fixed the time/fuel used
 
 -- Requires tf_common_functions v0.02 or later
 
@@ -30,7 +32,7 @@ local intFrameBorderSize = 5
 local fltTransparency = 0.10		--alpha value for the boxes
 
 --These help draw the status panel
-local fltFlightStartTimeSeconds = 0	--tracks time at start of flight
+local fltFlightStartTimeSeconds = os.clock() --tracks time at start of flight
 local fltFuelStartWeightKGs = 0		--tracks fuel weight at start of flight
 local fltFlightTimeSeconds = 0		--what gets displayed on screen
 local fltFuelUsedOnFlightKGs = 0	--what gets displayed on screen
@@ -52,6 +54,11 @@ local intActionTypeRegisterFlight = ACTION_AUTORESOLVE
 local intActionTypeEndflight = ACTION_AUTORESOLVE
 
 local bolLoginAlertRaised = 0	--to ensure alerts aren't raised more than once
+local bolFlightRegisteredAlertRaised = 0
+local bolFlightNotEndedAlertRaised = 0
+
+local fltTimerForEndFlight = 10	--wait this many seconds before auto-ending a flight
+local fltBeginLandedTimer = 0	--the time at landing
 
 dataref("fltCurrentFuelWeightKGs" ,"sim/flightmodel/weight/m_fuel_total")
 dataref("fse_connected", "fse/status/connected")
@@ -103,19 +110,19 @@ function tfFSE_DrawStatusPanel()
 	local y2 = y1 + intButtonHeight
 	local strTemp
 	
-	print(fltFuelUsedOnFlightKGs .. ";" .. fltFuelStartWeightKGs ..";" ..fltCurrentFuelWeightKGs)
+	--print(fltFuelUsedOnFlightKGs .. ";" .. fltFuelStartWeightKGs ..";" ..fltCurrentFuelWeightKGs)
 	--Work out what the panel values are
 	if fse_flying == 1 then
 		fltFlightTimeSeconds = os.clock() - fltFlightStartTimeSeconds
 		
 		--This bit is a hack. The fuel is suppose to sync when you start flight but there is a timing problem so we do it here as well
-		if fltFlightTimeSeconds > 0 and fltFlightTimeSeconds < 2 then
+		if fltFlightTimeSeconds > 0 and fltFlightTimeSeconds < 5 then
 			fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
 		end
 		
 		fltFuelUsedOnFlightKGs = tf_common_functions.round((fltFuelStartWeightKGs - fltCurrentFuelWeightKGs), 1)
 		if fltFuelUsedOnFlightKGs < 0 then 
-			--fltFuelUsedOnFlightKGs = 0 
+			fltFuelUsedOnFlightKGs = 0 
 		end
 	end
 	
@@ -129,7 +136,7 @@ function tfFSE_DrawStatusPanel()
 	graphics.set_color(1, 1, 1, fltTransparency) --white
 	graphics.draw_rectangle(x1,y1,x2,y2)
 	
-	--print(fltFlightStartTimeSeconds .. ";" .. fltFlightTimeSeconds)
+	--print(fltFlightStartTimeSeconds .. ";" .. fse_flighttime)
 	
 end
 
@@ -328,12 +335,13 @@ function tfFSE_DrawButtons()
 			tfFSE_DrawBetaState()
 		else
 			if bolCancelArmed == 0 then
-				if bolOnTheGround == 1 and datGSpd <= 5 then
+				if bolOnTheGround == 1 and datGSpd <= 5 and os.clock() >= fltBeginLandedTimer + 4 then
 					--fse_connected == 1
 					--fse_flying == 1
 					--bolCancelArmed == 0
 					--bolOnTheGround == 1
 					--datGSpd <= 5
+					--been stopped for at least 4 seconds
 					tfFSE_DrawEchoState()
 				else
 					--fse_connected == 1
@@ -361,9 +369,6 @@ function tfFSE_DrawThings()
 		tfFSE_DrawCorner()
 	end
 	
-	--This bit is a hack to try to get the correct fuel
-	
-	
 	--check for mouse over before drawing
 	local x1 = intHudXStart
 	local y1 = intHudYStart
@@ -390,7 +395,7 @@ function tfFSE_RegisterFlight()
 	bolCancelArmed = 0
 	fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
 	fltFlightStartTimeSeconds = os.clock()
-	print("reset")
+	--print("reset")
 end	
 	
 function tfFSE_CancelArm()
@@ -409,8 +414,13 @@ end
 	
 function tfFSE_EndFlight()
 	command_once("fse/flight/finish")
-	bolDeparted = 0
-	bolCancelArmed = 0
+	--print("Just called finish flight")
+	
+	if fse_flying == 0 then
+		bolDeparted = 0
+		bolCancelArmed = 0
+		fltBeginLandedTimer = 0
+	end
 end	
 	
 function tfFSE_MouseClick()
@@ -468,7 +478,7 @@ function tfFSE_MouseClick()
 					return
 				end
 				
-				if fse_flying == 1 and bolCancelArmed == 0 and bolOnTheGround == 1 and datGSpd <= 5 then
+				if fse_flying == 1 and bolCancelArmed == 0 and bolOnTheGround == 1 and datGSpd <= 5 and os.clock() >= fltBeginLandedTimer + 4 then
 					--End flight has been clicked
 					--print("Trying to end flight")
 					tfFSE_EndFlight()
@@ -518,7 +528,7 @@ function tfFSE_Automation()
 		elseif intActionTypeConnect == ACTION_TEXTANDVOICE then
 			--text and audible
 			XPLMSpeakString("Not logged into FSE")
-		else
+		elseif intActionTypeConnect == ACTION_AUTORESOLVE then
 			--auto-resolve
 			tfFSE_ConnectToServer()
 		end
@@ -526,6 +536,71 @@ function tfFSE_Automation()
 		bolLoginAlertRaised = 1	--this prevents the alert being raised multiple times
 			
 	end
+	
+	--if taking off and not registered flight then check if there needs to be an action
+	if bolOnTheGround == 0 and fse_flying == 0 and bolFlightRegisteredAlertRaised == 0 and fse_connected == 1 then
+		if intActionTypeRegisterFlight == ACTION_NONE then
+			--do nothing
+		elseif intActionTypeRegisterFlight == ACTION_TEXTONLY then
+			--display a text warning
+		
+			-- ## TODO: how to display a string outside a do_every_draw event?
+			
+		elseif intActionTypeRegisterFlight == ACTION_VOICEONLY then
+			--audible only
+			--speakNoText("Flight not registered with FSE") 
+		elseif intActionTypeRegisterFlight == ACTION_TEXTANDVOICE then
+			--text and audible
+			XPLMSpeakString("Flight not registered with FSE")
+		elseif intActionTypeRegisterFlight == ACTION_AUTORESOLVE then
+			--auto-resolve
+			tfFSE_RegisterFlight()
+		end
+
+		bolFlightRegisteredAlertRaised = 1  --this prevents the alert being raised multiple times
+	end
+	
+	--if landed then check if there needs to be an action
+	--print("end: " .. bolOnTheGround .. ";" .. datGSpd .. ";" .. fse_flying .. ";" .. bolDeparted .. ":" .. bolFlightNotEndedAlertRaised)
+	if bolOnTheGround == 1 and datGSpd < 5 and fse_flying == 1 and bolDeparted == 1 and bolFlightNotEndedAlertRaised == 0 then
+		if fltBeginLandedTimer == 0 then	--if timer is not started then start the timer.
+			fltBeginLandedTimer = os.clock()
+		end
+		
+		if os.clock() > fltBeginLandedTimer + fltTimerForEndFlight then
+			--try to end flight
+
+			--## Need to build in a 15 second timer to give the pilot to end flight manually
+			if intActionTypeEndflight == ACTION_NONE then
+				--do nothing
+			elseif intActionTypeEndflight == ACTION_TEXTONLY then
+				--display a text warning
+			
+				-- ## TODO: how to display a string outside a do_every_draw event?
+				
+			elseif intActionTypeEndflight == ACTION_VOICEONLY then
+				--audible only
+				--speakNoText("Flight not ended") 
+			elseif intActionTypeEndflight == ACTION_TEXTANDVOICE then
+				--text and audible
+				XPLMSpeakString("Flight not ended")
+			else
+				--auto-resolve
+				--print("trying to end flight")
+				tfFSE_EndFlight()
+			end
+			bolFlightNotEndedAlertRaised = 1  --this prevents the alert being raised multiple times	
+		end
+		
+
+	end	
+	
+	--capture if plane has taken off
+	--print("bodeparted = " .. bolDeparted)
+	if bolOnTheGround == 0 and bolDeparted == 0 then
+		bolDeparted = 1
+	end
+	
 end
 	
 do_every_draw("tfFSE_DrawThings()")
