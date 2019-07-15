@@ -17,6 +17,8 @@
 --		Re-introduced flight time and fuel used
 --v0.08
 --		Added some automation - fixed the time/fuel used
+--v0.09
+--		Added voice alerts for VR peeps
 
 -- Requires tf_common_functions v0.02 or later
 
@@ -43,12 +45,13 @@ local bolDeparted = 0				--0 = not yet departed from originating airport. Used f
 require "graphics"
 require "tf_common_functions"
 
+--These values need to be exponential: 1,2,4,8 etc.
 local ACTION_NONE = 0			--no action
-local ACTION_VOICEONLY = 1		--voice alert
-local ACTION_TEXTANDVOICE = 2	--text and voice
-local ACTION_AUTORESOLVE = 3	--auto-resolve
-local ACTION_TEXTONLY = 4		--text alert
+local ACTION_ATCDEFAULT = 1			--ATC voice with default ATC text settings
+local ACTION_PAUSE = 4				--Pauses the sim
+local ACTION_AUTORESOLVE = 8	--auto-resolve
 
+--These are user preferences
 local intActionTypeConnect = ACTION_AUTORESOLVE
 local intActionTypeRegisterFlight = ACTION_AUTORESOLVE
 local intActionTypeEndflight = ACTION_AUTORESOLVE
@@ -56,6 +59,8 @@ local intActionTypeEndflight = ACTION_AUTORESOLVE
 local bolLoginAlertRaised = 0	--to ensure alerts aren't raised more than once
 local bolFlightRegisteredAlertRaised = 0
 local bolFlightNotEndedAlertRaised = 0
+local bolAttemptedToAutoConnect = 0
+local bolAttemptedToAutoRegister = 0
 
 local fltTimerForEndFlight = 10	--wait this many seconds before auto-ending a flight
 local fltBeginLandedTimer = 0	--the time at landing
@@ -65,6 +70,8 @@ dataref("fse_connected", "fse/status/connected")
 dataref("fse_flying", "fse/status/flying")
 dataref("bolOnTheGround", "sim/flightmodel/failures/onground_any")
 dataref("datGSpd", "sim/flightmodel/position/groundspeed")
+dataref("intATCTextOut", "sim/operation/prefs/text_out", "writeable")
+dataref("fltAltAGL", "sim/cockpit2/gauges/indicators/radio_altimeter_height_ft_pilot")
 
 function tfFSE_DrawOutsidePanel()
 	--Draws the overall box
@@ -388,14 +395,19 @@ end
 function tfFSE_ConnectToServer()
 	command_once("fse/server/connect")
 	bolLoginAlertRaised = 0
+	bolFlightRegisteredAlertRaised = 0
+	bolAttemptedToAutoRegister = 0
 end
 
 function tfFSE_RegisterFlight()
-	command_once("fse/flight/start")
-	bolCancelArmed = 0
-	fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
-	fltFlightStartTimeSeconds = os.clock()
-	--print("reset")
+	if fse_flying == 0 and fse_connected == 1 then
+		command_once("fse/flight/start")
+		bolCancelArmed = 0
+		fltFuelStartWeightKGs = fltCurrentFuelWeightKGs
+		fltFlightStartTimeSeconds = os.clock()
+		bolFlightRegisteredAlertRaised = 0
+		bolAttemptedToAutoRegister = 0
+	end
 end	
 	
 function tfFSE_CancelArm()
@@ -409,18 +421,14 @@ function tfFSE_ReallyCancel()
 	if bolCancelArmed == 1 then	--this is unnecessary but for safety
 		command_once("fse/flight/cancelConfirm")
 		bolCancelArmed = 0
+		bolFlightRegisteredAlertRaised = 0
+		bolAttemptedToAutoRegister = 0
 	end
 end
 	
 function tfFSE_EndFlight()
 	command_once("fse/flight/finish")
-	--print("Just called finish flight")
-	
-	if fse_flying == 0 then
-		bolDeparted = 0
-		bolCancelArmed = 0
-		fltBeginLandedTimer = 0
-	end
+	bolAttemptedToAutoRegister = 0
 end	
 	
 function tfFSE_MouseClick()
@@ -510,102 +518,77 @@ function tfFSE_MouseClick()
 	end
 end	
 	
+
 function tfFSE_Automation()	
 	--detect key events and react according to the action settings specified by the user
 	
 	--if taxiing and not logged in then check if there needs to be an action
-	if datGSpd > 5 and fse_connected == 0 and bolLoginAlertRaised == 0 then
-		if intActionTypeConnect == ACTION_NONE then
-			--do nothing
-		elseif intActionTypeLogin == ACTION_TEXTONLY then
-			--display a text warning
-		
-			-- ## TODO: how to display a string outside a do_every_draw event?
-			
-		elseif intActionTypeConnect == ACTION_VOICEONLY then
-			--audible only
-			--speakNoText("Not logged into FSE") 
-		elseif intActionTypeConnect == ACTION_TEXTANDVOICE then
-			--text and audible
-			XPLMSpeakString("Not logged into FSE")
-		elseif intActionTypeConnect == ACTION_AUTORESOLVE then
-			--auto-resolve
+	if datGSpd > 5 and fse_connected == 0 and bolAttemptedToAutoConnect == 0 then
+		--Check to see what action to do
+		if intActionTypeConnect >= ACTION_AUTORESOLVE then
 			tfFSE_ConnectToServer()
+			bolAttemptedToAutoConnect = 1
 		end
-		
-		bolLoginAlertRaised = 1	--this prevents the alert being raised multiple times
-			
 	end
 	
 	--if taking off and not registered flight then check if there needs to be an action
-	if bolOnTheGround == 0 and fse_flying == 0 and bolFlightRegisteredAlertRaised == 0 and fse_connected == 1 then
-		if intActionTypeRegisterFlight == ACTION_NONE then
-			--do nothing
-		elseif intActionTypeRegisterFlight == ACTION_TEXTONLY then
-			--display a text warning
-		
-			-- ## TODO: how to display a string outside a do_every_draw event?
-			
-		elseif intActionTypeRegisterFlight == ACTION_VOICEONLY then
-			--audible only
-			--speakNoText("Flight not registered with FSE") 
-		elseif intActionTypeRegisterFlight == ACTION_TEXTANDVOICE then
-			--text and audible
-			XPLMSpeakString("Flight not registered with FSE")
-		elseif intActionTypeRegisterFlight == ACTION_AUTORESOLVE then
-			--auto-resolve
-			tfFSE_RegisterFlight()
-		end
 
-		bolFlightRegisteredAlertRaised = 1  --this prevents the alert being raised multiple times
+	if bolOnTheGround == 0 and fse_flying == 0 and fse_connected == 1 and bolAttemptedToAutoRegister == 0 then
+		if intActionTypeRegisterFlight >= ACTION_AUTORESOLVE then
+			tfFSE_RegisterFlight()
+			bolAttemptedToAutoRegister = 1
+		end
 	end
 	
 	--if landed then check if there needs to be an action
-	--print("end: " .. bolOnTheGround .. ";" .. datGSpd .. ";" .. fse_flying .. ";" .. bolDeparted .. ":" .. bolFlightNotEndedAlertRaised)
-	if bolOnTheGround == 1 and datGSpd < 5 and fse_flying == 1 and bolDeparted == 1 and bolFlightNotEndedAlertRaised == 0 then
+		
+
+	if bolOnTheGround == 1 and datGSpd < 5 and fse_flying == 1 and bolDeparted == 1 then
 		if fltBeginLandedTimer == 0 then	--if timer is not started then start the timer.
 			fltBeginLandedTimer = os.clock()
 		end
 		
 		if os.clock() > fltBeginLandedTimer + fltTimerForEndFlight then
 			--try to end flight
-
-			--## Need to build in a 15 second timer to give the pilot to end flight manually
-			if intActionTypeEndflight == ACTION_NONE then
-				--do nothing
-			elseif intActionTypeEndflight == ACTION_TEXTONLY then
-				--display a text warning
-			
-				-- ## TODO: how to display a string outside a do_every_draw event?
-				
-			elseif intActionTypeEndflight == ACTION_VOICEONLY then
-				--audible only
-				--speakNoText("Flight not ended") 
-			elseif intActionTypeEndflight == ACTION_TEXTANDVOICE then
-				--text and audible
-				XPLMSpeakString("Flight not ended")
-			else
-				--auto-resolve
-				--print("trying to end flight")
+			if intActionTypeEndflight >= ACTION_AUTORESOLVE then
 				tfFSE_EndFlight()
 			end
-			bolFlightNotEndedAlertRaised = 1  --this prevents the alert being raised multiple times	
 		end
-		
-
 	end	
-	
+
 	--capture if plane has taken off
-	--print("bodeparted = " .. bolDeparted)
 	if bolOnTheGround == 0 and bolDeparted == 0 then
 		bolDeparted = 1
 	end
 	
+	if fse_flying == 0 then
+		bolDeparted = 0
+		bolCancelArmed = 0
+		fltBeginLandedTimer = 0
+	end	
+end
+	
+function tfFSE_CheckAlarms()
+--Raise a voice alarm if auto-resolved didn't work
+
+	--check the auto-connect worked
+	if datGSpd > 15 and fse_connected == 0 and intActionTypeConnect >= ACTION_AUTORESOLVE and bolLoginAlertRaised == 0 then
+		--It seems the autoconnect didn't work. Need to say something.
+		XPLMSpeakString("Auto-connection failed")
+		bolLoginAlertRaised = 1
+	end
+	
+	--check that the auto-register worked
+	if bolOnTheGround == 0 and fse_flying == 0 and fse_connected == 1 and fltAltAGL > 300 and bolFlightRegisteredAlertRaised == 0 then
+		XPLMSpeakString("Flight auto-register failed")
+		bolFlightRegisteredAlertRaised = 1
+	end
 end
 	
 do_every_draw("tfFSE_DrawThings()")
 do_on_mouse_click("tfFSE_MouseClick()")
 do_sometimes("tfFSE_Automation()")
+do_sometimes("tfFSE_CheckAlarms()")
 	
 	
 	
