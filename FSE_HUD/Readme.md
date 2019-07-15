@@ -2,18 +2,6 @@ FSE_HUD
 
 TOGFox
 
-v0.02
-
-v0.03
-
-v0.04 
-
-    Auto-end flight works better
-
-v0.05
-
-    Added a hot-spot marker to help guide the mouse
-
 REQUIRES: tf_common_functions.lua placed into the \FlyWithLua\Modules folder
 
 Notes: You can reposition the HUD by adjusting these two lines:
