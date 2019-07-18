@@ -17,17 +17,30 @@ Notes: If you don't like the hot-spot marker then you can set this value to zero
 bolShowHotSpot = 1	--Change this to zero if you don't like the marker
 
 Notes: Audible alerts are OFF by default. VR pilots might want to turn them on by editing the script (carefully!)
-CHange these lines (row 40, 41 and 42):
+
+Change these lines (row 40, 41 and 42):
+
 local intActionTypeConnect = ACTION_AUTORESOLVE
+
 local intActionTypeRegisterFlight = ACTION_AUTORESOLVE
+
 local intActionTypeEndflight = ACTION_AUTORESOLVE
 
+
 To this:
+
 local intActionTypeConnect = ACTION_AUTORESOLVE + ACTION_ATCDEFAULT
+
 local intActionTypeRegisterFlight = ACTION_AUTORESOLVE +ACTION_ATCDEFAULT
+
 local intActionTypeEndflight = ACTION_AUTORESOLVE + ACTION_ATCDEFAULT
 
+
 --v0.10
+
 --		Adjusted fuel calculations
+
 --		Stopped auto-register from registering a flight while sim is paused
+
 --		Added audible alarm if auto-end flight fails to work
+
