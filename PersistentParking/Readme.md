@@ -13,6 +13,8 @@ TOGFox
 
 -- v0.05 - added an extra safeguard to stop loading old positions when landing
 
+-- v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
+
 Installation
 ============
 Place .lua file into the FWL scripts directory.
@@ -41,7 +43,8 @@ The script monitors the plane's movement and will remember where you parked your
 The script identifies a parked plane by:
 - being on the ground (of course)
 - having a ground speed < 10 knots and
-- having the park brake engaged
+- having the park brake engaged and
+- having the engine off
 
 When these conditions are met, the plane will be recognised as parked, and it's position will be remembered and restored next session.
 
