@@ -6,6 +6,7 @@
 --** v0.03 - better way of determining if plane is parked
 --** v0.04 - fixed a defect that gave really bad experiences if you crashed
 --** v0.05 - added an extra safeguard to stop loading old positions when landing
+--** v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
 --********************************
 
 --********************************
@@ -29,6 +30,7 @@ dataref("tfpp_datGSpd", "sim/flightmodel/position/groundspeed")
 dataref("tfpp_InReplayMode", "sim/time/is_in_replay")
 dataref("tfpp_bolOnTheGround", "sim/flightmodel/failures/onground_any")
 dataref("tfpp_intParkBrake","sim/flightmodel/controls/parkbrake")
+dataref("tfpp_bolEngineRunning", "sim/flightmodel/engine/ENGN_running")
 
 
 function tfpp_GetClosestAirport()
@@ -178,7 +180,7 @@ end
 function tfpp_main()
 
 	--get closest airport
-	tfpp_GetClosestAirport()	--thi sets the global variable strCurrentAirport
+	tfpp_GetClosestAirport()	--this sets the global variable strCurrentAirport
 	
 	if not bArrayInitialised and tfpp_bolOnTheGround == 1 and tfpp_InReplayMode == 0 and tfpp_datGSpd <= 4 then
 	
@@ -208,7 +210,7 @@ function tfpp_main()
 					set("sim/flightmodel/position/local_y", fltLocalY)
 					set("sim/flightmodel/position/psi", fltHeading)	
 					
-					print("Aircraft relocation complete")
+					--print("Aircraft relocation complete")
 				--end
 				
 				--print("heading after applying file = " .. get("sim/flightmodel/position/psi"))
@@ -226,7 +228,7 @@ function tfpp_main()
 	--store that in the array
 	--if tfpp_datGSpd < 20 and tfpp_datRAlt < 25 and tfpp_InReplayMode == 0 then
 	--if on the ground and stopped with the park brake on and not in replay mode then ...
-	if tfpp_bolOnTheGround == 1 and tfpp_datGSpd < 10 and tfpp_InReplayMode == 0 and tfpp_intParkBrake == 1 then
+	if tfpp_bolOnTheGround == 1 and tfpp_datGSpd < 10 and tfpp_InReplayMode == 0 and tfpp_intParkBrake == 1 and tfpp_bolEngineRunning == 0 then
 		--write whole array to table
 		tfpp_UpdateArray()
 		
