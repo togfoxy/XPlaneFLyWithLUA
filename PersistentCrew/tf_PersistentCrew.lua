@@ -22,6 +22,14 @@ dataref("tfpc_bolEngineRunning", "sim/flightmodel/engine/ENGN_running")
 require "graphics"
 require "tf_common_functions"
 
+function disp_time(fltTime)
+	local days = math.floor(fltTime/86400)
+	local hours = math.floor(math.fmod(fltTime, 86400)/3600)
+	local minutes = math.floor(math.fmod(fltTime,3600)/60)
+	local seconds = math.floor(math.fmod(fltTime,60))
+	--print("Days:"..days)
+	return days
+end
 function getTableSize(t)
     local count = 0
     for _, __ in pairs(t) do
@@ -130,23 +138,35 @@ function tfpc_main()
 					--Database is empty - read from file
 					tfpc_ReadDiskToArray()	--establishes the tfpc_Database array based on file contents
 				end
-				local strTemp = "You have crew at these airports:"
+				local strTemp = "You have crew at this airport:"
 				local strTemp1 = ""
 				local bolCrewFound = 0
+				local strICAO = ""
 				for k, v in pairs(tfpc_Database) do
 					--determine if the array item is "CrewQty" or "DateArrived"
+					strICAO = string.sub(k,1, 4)
 					strTemp1 = string.sub(k,(string.len(k)) - 6)	--gets the last x characters from the key/index (not value)
 					--print(strTemp1)
 					if strTemp1 == "CrewQty" then
 						if tonumber(v) > 0 then	--check if any crew are at the current airport
 							--construct a string of airports that have staff
 							if bolCrewFound == 0 then
-								--checky hack - if no crew found yet then this is the first
+								--cheeky hack - if no crew found yet then this is the first
 								strTemp = strTemp .. " " .. string.sub(k,1, 4)
 							else
 								--this is not the first airport - include the comma. Grammar matters!
 								strTemp = strTemp .. ", " .. string.sub(k,1, 4)
 							end
+							
+							
+							
+							--determine the time arrived
+							fltTimeStayed = os.clock() - tfpc_Database[strICAO.."DateArrived"]
+							--fltTimeStayed = (tf_common_functions.tf_SecondsToClockFormat(fltTimeStayed))
+							--print (fltTimeStayed)
+							--print(tf_common_functions.tf_SecondsToClockFormat(fltTimeStayed))
+							
+							strTemp = strTemp .. ". Time stayed: " .. disp_time(fltTimeStayed) .. " days."
 
 							bolCrewFound = 1
 							--print ("strTemp:" .. strTemp)
