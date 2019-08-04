@@ -47,3 +47,5 @@ local intActionTypeEndflight = ACTION_AUTORESOLVE + ACTION_ATCDEFAULT
 --v0.12
 --		Added park brake = on when checking ot end flight
 --		Tweaked the fuel conversion to gallons
+--v0.13
+--		Flight time is now FSE flight time
