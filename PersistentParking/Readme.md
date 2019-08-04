@@ -15,6 +15,8 @@ TOGFox
 
 -- v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
 
+-- v0.07 - refactored code so it is ready for a beta release
+
 Installation
 ============
 Place .lua file into the FWL scripts directory.
