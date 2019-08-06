@@ -3,13 +3,14 @@ Persistent Parking
 
 TOGFox
 
--- v0.01 - initial release
--- v0.02 - now writes to file only if on the ground and not flying
--- v0.03 - better way of determining if plane is parked
--- v0.04 - fixed a defect that gave really bad experiences if you crashed
--- v0.05 - added an extra safeguard to stop loading old positions when landing
--- v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
--- v0.07 - refactored code so it is ready for a beta release
+--v0.01 - initial release
+--v0.02 - now writes to file only if on the ground and not flying
+--v0.03 - better way of determining if plane is parked
+--v0.04 - fixed a defect that gave really bad experiences if you crashed
+--v0.05 - added an extra safeguard to stop loading old positions when landing
+--v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
+--v0.07 - refactored code so it is ready for a beta release
+--v0.08 - simplified the database save/load functions to help reduce bugs
 
 Installation
 ============
