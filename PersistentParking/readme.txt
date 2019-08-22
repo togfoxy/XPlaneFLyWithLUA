@@ -11,6 +11,7 @@ TOGFox
 --v0.06 - will now save location only if engine is off (stops saving location when holding short or lined up and waiting)
 --v0.07 - refactored code so it is ready for a beta release
 --v0.08 - simplified the database save/load functions to help reduce bugs
+--v0.09 - fixed orientation just a little bit. Needs more work.
 
 Installation
 ============
