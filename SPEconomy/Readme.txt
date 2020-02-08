@@ -73,7 +73,7 @@ As with most open ended formats - winning is what you decide it is. The framewor
 
 Support
 
-togfox at gmail dot complete
+togfox at gmail dot com
 
 
 
