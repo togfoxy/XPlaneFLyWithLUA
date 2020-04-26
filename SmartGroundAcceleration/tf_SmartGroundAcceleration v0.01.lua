@@ -3,7 +3,8 @@
 -- v0.01 	- initial release
 -- v0.02	- no changes (yet)
 -- v0.03	- added menu
-strVersion = "0.03"
+-- v0.04	- wired menu
+strVersion = "0.04"
 
 dataref("tf_DMEDistance", "sim/cockpit2/radios/indicators/hsi_dme_distance_nm_pilot")
 dataref("tf_InReplayMode", "sim/time/is_in_replay")
@@ -13,24 +14,34 @@ local tf_ProtectionActive = 0	-- a tracker so we know when the GC has been adjus
 local tf_RequestedGCValue = 1	-- track the requested GC value so it can be restored when needed
 local tf_TurnGCOnTarget = 0		-- this is the distance to the next WP to turn on TC
 local tf_WPThreshold = 2		-- this is the distance to/from the WP where GC needs to be 1
-local tf_pickedMultiplier = 2;	-- this is the selected multiplier
+local tf_pickedMultiplier = 1;	-- this is the selected multiplier
 local tf_scriptActivate = 0;	-- this flags toggles the script activation
+
+-- not working yet
 local tf_distanceToPause = 0;	-- this is the distance from the final destination to pause the sim
 
 
 function tf_WaypointProtectionMain()
 
+	if not tf_scriptActivate then
+		return true;
+	end
+	--print("active" .. "Replay:" .. tf_InReplayMode .. "distance to next: " .. tf_DMEDistance)
 	if tf_InReplayMode == 0 and tf_DMEDistance > 0.1 then
 	
-		-- print("DME: " .. tf_DMEDistance .. " GC: " .. tf_GroundCompression .. " PA: " .. tf_ProtectionActive)
+		print("DME: " .. tf_DMEDistance .. " GC: " .. tf_GroundCompression .. " PA: " .. tf_ProtectionActive .. " TH: " .. tf_WPThreshold)
 	
+		if tf_ProtectionActive == 1 and tf_pickedMultiplier > 1 then
+			-- I changed the multiplier while in safe mode
+			print("correcting behavior")
+			tf_GroundCompression = 1
+		end
+
+
 		if tf_DMEDistance < tf_WPThreshold and tf_GroundCompression > 1 and tf_ProtectionActive == 0 then
 			-- preserve this so we can restore it later
-			tf_RequestedGCValue = tf_GroundCompression
-			
 			tf_GroundCompression = 1
 			tf_ProtectionActive = 1
-		
 		end
 		
 		if tf_DMEDistance > tf_WPThreshold and tf_ProtectionActive == 1 and tf_TurnGCOnTarget == 0 then
@@ -41,14 +52,12 @@ function tf_WaypointProtectionMain()
 		end
 		
 		if tf_DMEDistance > tf_WPThreshold and tf_ProtectionActive == 1 and tf_DMEDistance < tf_TurnGCOnTarget then
-			tf_GroundCompression = tf_RequestedGCValue
+
+			tf_GroundCompression = tf_pickedMultiplier
 			tf_ProtectionActive = 0
 			tf_TurnGCOnTarget = 0
 		end
 	end
-
-
-
 end
 
 
@@ -63,12 +72,12 @@ function tf_SGA_build_Window(wnd, x, y)
 	-- set up the xplane to GSA menu
 
 	-- Parameters: label, Current value for the switch
-	local changed, newVal = imgui.Checkbox("Activate Smart Ground Acceleration", scriptActivate)
+	local changed, newVal = imgui.Checkbox("Activate Smart Ground Acceleration", tf_scriptActivate)
 	if changed then
-		scriptActivate = newVal
+		tf_scriptActivate = newVal
 	end
 
-	local choices = {"2", "4", "8", "16"}
+	local choices = {"1", "2", "4", "8", "16"}
 	-- BeginCombo starts a combo box. The first parameter is the label, the
 	-- second parameter the text of the currently selected choice.
 	
@@ -82,7 +91,8 @@ function tf_SGA_build_Window(wnd, x, y)
 				-- Selectable returns true when a new choice was selected,
 				-- we should then copy the choice into our choice variable
 				choice = i
-				tf_pickedMultiplier = choices[i]
+				tf_pickedMultiplier = tonumber(choices[i])
+				tf_GroundCompression = tf_pickedMultiplier
 			end
 		end
 		-- _Must_ be called if and only if BeginCombo returns true, i.e.
@@ -95,7 +105,10 @@ function tf_SGA_build_Window(wnd, x, y)
 	local changedD, newTextD = imgui.InputText("", tf_WPThreshold, 2)
 	-- Parameters: Label, current text, maximum number of allowed characters
 	if changedD then
-		tf_WPThreshold = newTextD
+		local newNumber = tonumber(newTextD)
+		if not ( newNumber == nil ) then
+			tf_WPThreshold = newNumber
+		end
 	end
 
 	-- Allow the user to input text
@@ -103,7 +116,10 @@ function tf_SGA_build_Window(wnd, x, y)
 	local changedP, newTextP = imgui.InputText(" ", tf_distanceToPause, 4)
 	-- Parameters: Label, current text, maximum number of allowed characters
 	if changedP then
-		tf_distanceToPause = newTextP
+		local newNumber = tonumber(newTextP)
+		if not ( newNumber == nil ) then
+			tf_distanceToPause = newNumber
+		end
 	end
 end
 
