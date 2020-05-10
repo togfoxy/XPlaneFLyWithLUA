@@ -4,10 +4,7 @@
 -- v0.02	- no changes (yet)
 -- v0.03	- added menu
 -- v0.04	- wired menu
--- v0.05	- changed to support FMS for 738 Laminar
-	-- added fix for several waypoints too close
-	-- route changed before hitting the waypoint
-	-- correct route if plain drifts from the path
+-- v0.04	- prevents accell when plane is rolling
 strVersion = "0.05"
 
 dataref("tf_DMEDistance", "laminar/B738/fms/lnav_dist_next")
@@ -16,10 +13,12 @@ dataref("tf_GroundCompression", "sim/time/ground_speed", "writeable")
 dataref("tf_DistanceFromDestination", "laminar/B738/FMS/dist_dest", "readonly")
 dataref("tf_SimPaused", "sim/time/paused", "writeable")
 dataref("tf_TrackOffset", "laminar/B738/fms/xtrack", "readonly")
+dataref("tf_roll", "sim/cockpit2/autopilot/sync_hold_roll_deg")
+
 
 local tf_ProtectionActive = 0	-- a tracker so we know when the GC has been adjusted down
 local tf_TurnGCOnTarget = 0		-- this is the distance to the next WP to turn on TC
-local tf_WPThreshold = 8		-- this is the distance to/from the WP where GC needs to be 1
+local tf_WPThreshold = 3		-- this is the distance to/from the WP where GC needs to be 1
 local tf_scriptActivate = false	-- this flags toggles the script activation
 local tf_missed = 0
 local tf_SelectedCompressionRate = 1
@@ -62,9 +61,9 @@ function tf_WaypointProtectionMain()
 		-- print ("now is " .. tf_currentTarget)
 		-- print ("before was " .. tf_previousTarget)
 
-		if (tf_distanceToPause > 0 and tf_distanceToPause == math.floor(tf_DistanceFromDestination+0.5) ) then
+		if (tf_distanceToPause > 0 and tf_distanceToPause >= math.floor(tf_DistanceFromDestination+0.5) ) then
 			print("pause")
-			tf_SimPaused = 1
+			command_once("sim/operation/pause_toggle")
 			tf_GroundCompression = 1
 			tf_ProtectionActive = 0
 			tf_TurnGCOnTarget = 0
@@ -93,7 +92,7 @@ function tf_WaypointProtectionMain()
 			end
 		end
 		
-		if tf_DMEDistance > tf_WPThreshold and tf_ProtectionActive == 1 and tf_DMEDistance < tf_TurnGCOnTarget then
+		if tf_DMEDistance > tf_WPThreshold and tf_ProtectionActive == 1 and tf_DMEDistance < tf_TurnGCOnTarget and math.abs(tf_roll) < 2 then
 			print("restoring: ".. tf_SelectedCompressionRate)
 			tf_GroundCompression = tf_SelectedCompressionRate
 			tf_ProtectionActive = 0
@@ -175,6 +174,7 @@ function tf_SGA_build_Window(wnd, x, y)
 
 
 	imgui.TextUnformatted("DME: " .. tf_DMEDistance .. " GC: " .. tf_GroundCompression .. " PA: " .. tf_ProtectionActive .. " TH: " .. tf_WPThreshold .. " TOT: ".. tf_TurnGCOnTarget)
+	imgui.TextUnformatted("Track offset: " .. tf_TrackOffset .. " Roll: " .. tf_roll)
 end
 
 do_often("tf_WaypointProtectionMain()")
